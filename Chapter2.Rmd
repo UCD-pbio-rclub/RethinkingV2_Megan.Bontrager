@@ -109,6 +109,18 @@ Pr_earth_land = (Pr_land_earth*Pr_earth)/(Pr_land_earth*Pr_earth + Pr_land_mars*
 Pr_earth_land
 ```
 
+Or, with Julin's approach:
+
+```{r}
+prior = c(0.5, 0.5)
+prob = c(0.7, 0)
+lik = dbinom(0, 1, prob)
+un.pos = prior*lik
+post = un.pos/sum(un.pos)
+post
+
+```
+
 ### 2M4
 
 Three cards: B/B B/W W/W

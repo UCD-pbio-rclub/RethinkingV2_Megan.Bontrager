@@ -1,0 +1,24 @@
+---
+title: "Chapter3"
+author: "Megan Bontrager"
+date: "4/19/2019"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 3E1 
+### 3E2 
+### 3E3 
+### 3E4 
+### 3E5 
+### 3E6 
+### 3E7
+### 3M1
+### 3M2
+### 3M3
+### 3M4
