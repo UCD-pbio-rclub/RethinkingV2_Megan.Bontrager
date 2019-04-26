@@ -23,9 +23,9 @@ Two parameters are in the posterior distribution: the mean and the variance.
 
 
 ### 4E3
-
-Pr($\mu$, $\sigma$ | y) = $\frac{\Pi i Normal(y | \mu, \sigma) Normal(\mu | 0, 10) Uniform (\sigma | 0, 10)}{\int \int \Pi Normal(y | \mu, \sigma) Normal(\mu | 0, 10) Uniform (\sigma | 0, 10) d\mu d\sigma}$
-
+$$
+Pr(\mu, \sigma | y) = \frac{\Pi_i Normal(y | \mu, \sigma) Normal(\mu | 0, 10) Uniform (\sigma | 0, 10)}{\int \int \Pi Normal(y | \mu, \sigma) Normal(\mu | 0, 10) Uniform (\sigma | 0, 10) d\mu d\sigma}
+$$
 
 ### 4E4
 
@@ -41,10 +41,11 @@ Three: the intercept, the slope, and the standard deviation.
 
 For the model definition below, simulate observed heights from the prior (not the posterior).
 
-yi ∼ Normal(\mu, \sigma) 
-\mu ∼ Normal(0, 10) 
+$$
+y_i ∼ Normal(\mu, \sigma) \\
+\mu ∼ Normal(0, 10) \\
 \sigma ∼ Uniform(0, 10)
-
+$$
 
 ```{r}
 
@@ -67,7 +68,8 @@ Translate the model just above into a quap formula.
 #         y ~ dnorm(mu, sigma),
 #         mu ~ dnorm(0, 10),
 #         sigma ~ dunif(0, 10)
-#     ), data = nA)
+#     ), data = NA)
+
 
 ```
 
@@ -89,15 +91,15 @@ Translate the quap model formula below into a mathematical model definition.
 # )
 ```
 
+$$
+y_i ~ Normal(\mu, \sigma) \\
 
-yi ~ Normal($\mu$, $\sigma$)
+\mu_i = \alpha + \beta * x_i \\
 
-$\mu$ i = $\alpha$ + $\beta$ * xi
+\alpha \sim Normal(0, 5) \\
 
-$\alpha$ ~ Normal(0, 50)
+\beta \sim Normal(0, 10) \\
 
-$\beta$ ~ Normal(0, 10)
-
-$\sigma$ ~ Uniform(0, 50)
-
+\sigma \sim Uniform(0, 50)
+$$
 
