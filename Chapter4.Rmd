@@ -12,6 +12,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(rethinking)
 ```
 
+## 26 April 2019
+
 ### 4E1
 
 The first line is the likelihood. 
@@ -102,4 +104,41 @@ y_i ~ Normal(\mu, \sigma) \\
 
 \sigma \sim Uniform(0, 50)
 $$
+
+
+## 3 May 2019
+
+### 4M4
+
+```{r}
+
+```
+
+
+### 4M5
+
+```{r}
+
+```
+
+
+### 4M6
+
+```{r}
+
+```
+
+
+### 4H1
+
+```{r}
+
+```
+
+
+### 4H2
+```{r}
+
+```
+
 
