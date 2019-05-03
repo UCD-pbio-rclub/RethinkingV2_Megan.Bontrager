@@ -190,7 +190,7 @@ h_i \sim Normal(\mu_i, \sigma) \\
 
 \beta \sim Lognormal(2.3, 1) \\
 
-\sigma \sim Uniform(0, 64) \\
+\sigma \sim Uniform(0, 8) \\
 $$
 
 ### 4H1
