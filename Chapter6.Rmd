@@ -12,6 +12,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### Working through Chapter 6
 
+Notes on confound types:
+
+
+
+
 ```{r}
 
 library(rethinking)
@@ -133,7 +138,7 @@ m6.3 = quap(
 m6.4 = quap(
     alist(
         K ~ dnorm(mu, sigma),
-        mu = a + bL*L,
+        mu <- a + bL*L,
         a ~ dnorm(0, 0.2),
         bL ~ dnorm(0, 0.5),
         sigma ~ dexp(1)
@@ -208,7 +213,7 @@ precis(data.frame(sim_p))
 m6.6 = quap(
     alist(
         h1 ~ dnorm(mu, sigma),
-        mu = h0*p,
+        mu <- h0*p,
         p ~ dlnorm(0, 0.25),
         sigma ~ dexp(1)
    ), data=d)
@@ -218,8 +223,8 @@ precis(m6.6)
 m6.7 = quap(
     alist(
         h1 ~ dnorm(mu, sigma),
-        mu = h0 * p,
-        p = a + bt*treatment + bf*fungus,
+        mu <- h0 * p,
+        p <- a + bt*treatment + bf*fungus,
         a ~ dlnorm(0, 0.2),
         bt ~ dnorm(0, 0.5),
         bf ~ dnorm(0, 0.5),
@@ -231,8 +236,8 @@ precis(m6.7)
 m6.8 = quap(
     alist(
         h1 ~ dnorm(mu, sigma),
-        mu = h0 * p,
-        p = a + bt*treatment,
+        mu <- h0 * p,
+        p <- a + bt*treatment,
         a ~ dlnorm(0, 0.2),
         bt ~ dnorm(0, 0.5),
         sigma ~ dexp(1)
@@ -271,7 +276,7 @@ d2$mid = d2$married + 1
 m6.9 = quap(
     alist(
         happiness ~ dnorm(mu, sigma),
-        mu = a[mid] + bA*A,
+        mu <- a[mid] + bA*A,
         a[mid] ~ dnorm(0, 1),
         bA ~ dnorm(0, 2),
         sigma ~ dexp(1)
@@ -282,7 +287,7 @@ precis(m6.9,depth=2)
 m6.10 = quap(
     alist(
         happiness ~ dnorm(mu, sigma),
-        mu = a + bA*A,
+        mu <- a + bA*A,
         a ~ dnorm(0, 1),
         bA ~ dnorm(0, 2),
         sigma ~ dexp(1)
@@ -308,7 +313,7 @@ d = data.frame(C=C, P=P, G=G, U=U)
 m6.11 = quap(
     alist(
         C ~ dnorm(mu, sigma),
-        mu = a + b_PC*P + b_GC*G,
+        mu <- a + b_PC*P + b_GC*G,
         a ~ dnorm(0, 1),
         c(b_PC,b_GC) ~ dnorm(0, 1),
         sigma ~ dexp(1)
@@ -319,7 +324,7 @@ precis(m6.11)
 m6.12 = quap(
     alist(
         C ~ dnorm(mu, sigma),
-        mu = a + b_PC*P + b_GC*G + b_U*U,
+        mu <- a + b_PC*P + b_GC*G + b_U*U,
         a ~ dnorm(0, 1),
         c(b_PC,b_GC,b_U) ~ dnorm(0, 1),
         sigma ~ dexp(1)
