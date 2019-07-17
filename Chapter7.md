@@ -72,3 +72,46 @@ p = c(1/3, 1/3, 1/3)
 ## [1] 1.098612
 ```
 1.10
+
+
+### 7M1. Write down and compare the definitions of AIC, DIC, and WAIC. Which of these criteria is most general? Which assumptions are required to transform a more general criterion into a less general one?
+
+From least to most general:
+
+AIC: an estimate of the average out of sample deviance. Assumes flat priors, gaussian posterior, sample size >> number of parameters.
+
+D_train + 2p = 2lppd + 2p
+
+p = number of free parameters (<- what is free?)
+
+DIC: an estimate of the average out of sample deviance. Assumes gaussian posterior, sample size >> number of parameters, but can accomodate informative piors.
+
+WAIC: an approximation of the out of sample deviance that converges to the LOO CV approximation of a large sample. No assumptions about the shape of the posterior and can accomodate flat priors. 
+
+
+### 7M2. Explain the difference between model selection and model averaging. What information is lost under model selection? What information is lost under model averaging?
+
+Model selection means trying to pick the "best" model, by choosing the model with the lowest IC value. By selecting just one model and not assessing the others, you lose information about the relative performance of the different models you have fit. If many models perform similarly, that's relevant information because maybe all are valid descriptions of the data. Similarly, if one model is far better than the others, that gives you more confidence that it's the best among those you compared. 
+
+A better approach is to compare models and retain information about their relative performance. You could then weight the models by their performance and average the parameter esitmates across them. 
+
+
+### 7M3. When comparing models with an information criterion, why must all models be fit to exactly the same observations? What would happen to the information criterion values, if the models were fit to different numbers of observations? Perform some experiments, if you are not sure.
+
+
+
+### 7M4. What happens to the effective number of parameters, as measured by DIC or WAIC, as a prior becomes more concentrated? Why? Perform some experiments, if you are not sure.
+
+The "effective number of parameters" is equivalent to the penalty term in these calculations. If the prior is more concentrated
+
+### 7M5.Provide an informal explanation of why informative priors reduce overfitting.
+
+Informative priors reduce overfitting because they prevent the model from learning too much from the data, and dampen the range of parameter values that the model will give. 
+
+### 7M6. Provide an information explanation of why overly informative priors result in underfitting.
+
+If parameters are too informative, they will prevent the sample from learning from the data. 
+
+
+
+

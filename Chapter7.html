@@ -421,6 +421,35 @@ $(document).ready(function () {
 <pre><code>## [1] 1.098612</code></pre>
 <p>1.10</p>
 </div>
+<div id="m1.-write-down-and-compare-the-definitions-of-aic-dic-and-waic.-which-of-these-criteria-is-most-general-which-assumptions-are-required-to-transform-a-more-general-criterion-into-a-less-general-one" class="section level3">
+<h3>7M1. Write down and compare the definitions of AIC, DIC, and WAIC. Which of these criteria is most general? Which assumptions are required to transform a more general criterion into a less general one?</h3>
+<p>From least to most general:</p>
+<p>AIC: an estimate of the average out of sample deviance. Assumes flat priors, gaussian posterior, sample size &gt;&gt; number of parameters.</p>
+<p>D_train + 2p = 2lppd + 2p</p>
+<p>p = number of free parameters (&lt;- what is free?)</p>
+<p>DIC: an estimate of the average out of sample deviance. Assumes gaussian posterior, sample size &gt;&gt; number of parameters, but can accomodate informative piors.</p>
+<p>WAIC: an approximation of the out of sample deviance that converges to the LOO CV approximation of a large sample. No assumptions about the shape of the posterior and can accomodate flat priors.</p>
+</div>
+<div id="m2.-explain-the-difference-between-model-selection-and-model-averaging.-what-information-is-lost-under-model-selection-what-information-is-lost-under-model-averaging" class="section level3">
+<h3>7M2. Explain the difference between model selection and model averaging. What information is lost under model selection? What information is lost under model averaging?</h3>
+<p>Model selection means trying to pick the “best” model, by choosing the model with the lowest IC value. By selecting just one model and not assessing the others, you lose information about the relative performance of the different models you have fit. If many models perform similarly, that’s relevant information because maybe all are valid descriptions of the data. Similarly, if one model is far better than the others, that gives you more confidence that it’s the best among those you compared.</p>
+<p>A better approach is to compare models and retain information about their relative performance. You could then weight the models by their performance and average the parameter esitmates across them.</p>
+</div>
+<div id="m3.-when-comparing-models-with-an-information-criterion-why-must-all-models-be-fit-to-exactly-the-same-observations-what-would-happen-to-the-information-criterion-values-if-the-models-were-fit-to-different-numbers-of-observations-perform-some-experiments-if-you-are-not-sure." class="section level3">
+<h3>7M3. When comparing models with an information criterion, why must all models be fit to exactly the same observations? What would happen to the information criterion values, if the models were fit to different numbers of observations? Perform some experiments, if you are not sure.</h3>
+</div>
+<div id="m4.-what-happens-to-the-effective-number-of-parameters-as-measured-by-dic-or-waic-as-a-prior-becomes-more-concentrated-why-perform-some-experiments-if-you-are-not-sure." class="section level3">
+<h3>7M4. What happens to the effective number of parameters, as measured by DIC or WAIC, as a prior becomes more concentrated? Why? Perform some experiments, if you are not sure.</h3>
+<p>The “effective number of parameters” is equivalent to the penalty term in these calculations. If the prior is more concentrated</p>
+</div>
+<div id="m5.provide-an-informal-explanation-of-why-informative-priors-reduce-overfitting." class="section level3">
+<h3>7M5.Provide an informal explanation of why informative priors reduce overfitting.</h3>
+<p>Informative priors reduce overfitting because they prevent the model from learning too much from the data, and dampen the range of parameter values that the model will give.</p>
+</div>
+<div id="m6.-provide-an-information-explanation-of-why-overly-informative-priors-result-in-underfitting." class="section level3">
+<h3>7M6. Provide an information explanation of why overly informative priors result in underfitting.</h3>
+<p>If parameters are too informative, they will prevent the sample from learning from the data.</p>
+</div>
 </div>
 
 
