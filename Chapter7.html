@@ -381,13 +381,110 @@ $(document).ready(function () {
 </div>
 
 
-<div id="video-7-notes" class="section level2">
-<h2>Video 7 notes:</h2>
-<p>Review:</p>
-<p>Fork: common cause of 2 things (open)</p>
-<p>Pipe: middle term mediates relationship between 2 other variables (open)</p>
-<p>Collider: Z is a common result of 2 other variables (closed)</p>
-<p>Descendant: A descendant of the Z exists and is like a weaker version of Z</p>
+<div id="homework-problems-added-24-july" class="section level2">
+<h2>Homework problems (added 24 July)</h2>
+<ol style="list-style-type: decimal">
+<li>Three islands, five birb species. First, compute entropy of each island’s birb distribution.</li>
+</ol>
+<pre class="r"><code>i1 = c(0.2, 0.2, 0.2, 0.2, 0.2)
+-sum(i1*log(i1))</code></pre>
+<pre><code>## [1] 1.609438</code></pre>
+<pre class="r"><code>i2 = c(0.8, 0.1, 0.05, 0.025, 0.025)
+-sum(i2*log(i2))</code></pre>
+<pre><code>## [1] 0.7430039</code></pre>
+<pre class="r"><code>i3 = c(0.05, 0.15, 0.7, 0.05, 0.05)
+-sum(i3*log(i3))</code></pre>
+<pre><code>## [1] 0.9836003</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th></th>
+<th>Birb A</th>
+<th>Birb B</th>
+<th>Birb C</th>
+<th>Birb D</th>
+<th>Birb E</th>
+<th>Entropy</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Island 1</td>
+<td>0.2</td>
+<td>0.2</td>
+<td>0.2</td>
+<td>0.2</td>
+<td>0.2</td>
+<td>1.61</td>
+</tr>
+<tr class="even">
+<td>Island 2</td>
+<td>0.8</td>
+<td>0.1</td>
+<td>0.05</td>
+<td>0.025</td>
+<td>0.025</td>
+<td>0.743</td>
+</tr>
+<tr class="odd">
+<td>Island 3</td>
+<td>0.05</td>
+<td>0.15</td>
+<td>0.7</td>
+<td>0.05</td>
+<td>0.05</td>
+<td>0.984</td>
+</tr>
+</tbody>
+</table>
+<p>Island 1 has the highest entropy - because the proportions are pretty even there is high uncertainty about which birb would pop up in a random draw. Island 2 has the lowest entropy. Since most of the bribs are species A, there is lower uncertainty about which species any given bird will be.</p>
+<p>Second, use each island’s birb distribution to predict the other two islands. - compute K-L divergence of each island from each of the others.</p>
+<pre class="r"><code>i1 = c(0.2, 0.2, 0.2, 0.2, 0.2)
+
+i2 = c(0.8, 0.1, 0.05, 0.025, 0.025)
+
+i3 = c(0.05, 0.15, 0.7, 0.05, 0.05)
+
+Dkl_12 = sum(i1*(log(i1) - log(i2)))
+Dkl_13 = sum(i1*(log(i1) - log(i3)))
+
+Dkl_21 = sum(i2*(log(i2) - log(i1)))
+Dkl_23 = sum(i2*(log(i2) - log(i3)))
+
+Dkl_31 = sum(i3*(log(i3) - log(i1)))
+Dkl_32 = sum(i3*(log(i3) - log(i2)))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th></th>
+<th>q = Island 1</th>
+<th>q = Island 2</th>
+<th>q = Island 3</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>p = Island 1</td>
+<td></td>
+<td>0.970</td>
+<td>0.639</td>
+</tr>
+<tr class="even">
+<td>p = Island 2</td>
+<td>0.866</td>
+<td></td>
+<td>2.01</td>
+</tr>
+<tr class="odd">
+<td>p = Island 3</td>
+<td>0.626</td>
+<td>1.84</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Which island predicts the others best? Why?</p>
+<p>Island 1 predicts the others best because it “expects” each species of birds evenly, so it’s not particularly “surprised” by the other islands’ values.</p>
 </div>
 <div id="exercises" class="section level2">
 <h2>Exercises</h2>
@@ -450,6 +547,15 @@ $(document).ready(function () {
 <h3>7M6. Provide an information explanation of why overly informative priors result in underfitting.</h3>
 <p>If parameters are too informative, they will prevent the sample from learning from the data.</p>
 </div>
+</div>
+<div id="notes" class="section level2">
+<h2>Notes:</h2>
+<p>Review:</p>
+<p>Index variables for categorical variables: - Dummy: 0, 1 for each possible state results in basically n category intercepts - Assumes more uncertainty for some variables - Instead: index variables - Same prior for all categories Example: h ~ dnorm (mu, sigma), mu &lt;- a[sex], a[sex] ~ dnorm(prior), sigma ~ dunif(prior) result is estimates of alpha for each sex. can calculate distribution of differences between categories with subtraction of columns in the posterior</p>
+<p>Fork: common cause of 2 things (open) - If both things are in model, only 1 might have non-zero parameter estimate - Either thing alone might have an effect. - Once we know A, little additional information provided by B, but if we know B, A is still useful.</p>
+<p>Pipe: middle term mediates relationship between 2 other variables (open)</p>
+<p>Collider: Z is a common result of 2 other variables (closed)</p>
+<p>Descendant: A descendant of the Z exists and is like a weaker version of Z</p>
 </div>
 
 

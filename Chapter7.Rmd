@@ -11,17 +11,81 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Video 7 notes:
 
-Review:
 
-Fork: common cause of 2 things (open)
 
-Pipe: middle term mediates relationship between 2 other variables (open)
 
-Collider: Z is a common result of 2 other variables (closed)
+## Homework problems (added 24 July)
 
-Descendant: A descendant of the Z exists and is like a weaker version of Z 
+#### 1. Three islands, five birb species. First, compute entropy of each island's birb distribution. 
+
+
+```{r}
+i1 = c(0.2, 0.2, 0.2, 0.2, 0.2)
+-sum(i1*log(i1))
+
+i2 = c(0.8, 0.1, 0.05, 0.025, 0.025)
+-sum(i2*log(i2))
+
+i3 = c(0.05, 0.15, 0.7, 0.05, 0.05)
+-sum(i3*log(i3))
+
+```
+
+
+
+|         | Birb A | Birb B | Birb C | Birb D | Birb E | Entropy |
+|---------|--------|--------|--------|--------|--------|---------|         
+|Island 1 | 0.2 | 0.2 | 0.2 | 0.2 | 0.2 | 1.61 |
+|Island 2 | 0.8 | 0.1 | 0.05 | 0.025 | 0.025 | 0.743 |
+|Island 3 |0.05 | 0.15 | 0.7 | 0.05 | 0.05 | 0.984 |
+
+Island 1 has the highest entropy - because the proportions are pretty even there is high uncertainty about which birb would pop up in a random draw. Island 2 has the lowest entropy. Since most of the bribs are species A, there is lower uncertainty about which species any given bird will be. 
+
+Second, use each island's birb distribution to predict the other two islands. 
+- compute K-L divergence of each island from each of the others.
+
+```{r}
+i1 = c(0.2, 0.2, 0.2, 0.2, 0.2)
+
+i2 = c(0.8, 0.1, 0.05, 0.025, 0.025)
+
+i3 = c(0.05, 0.15, 0.7, 0.05, 0.05)
+
+Dkl_12 = sum(i1*(log(i1) - log(i2)))
+Dkl_13 = sum(i1*(log(i1) - log(i3)))
+
+Dkl_21 = sum(i2*(log(i2) - log(i1)))
+Dkl_23 = sum(i2*(log(i2) - log(i3)))
+
+Dkl_31 = sum(i3*(log(i3) - log(i1)))
+Dkl_32 = sum(i3*(log(i3) - log(i2)))
+
+```
+
+|              | q = Island 1 | q = Island 2 | q = Island 3 | 
+|--------------|--------|--------|--------|
+| p = Island 1 |     | 0.970    | 0.639  | 
+| p = Island 2 |  0.866    |     | 2.01 | 
+| p = Island 3 |  0.626  | 1.84    |  |
+
+Which island predicts the others best? Why?
+
+Island 1 predicts the others best because it "expects" each species of birds evenly, so it's not particularly "surprised" by the other islands' values.
+
+#### 2. Compare models m6.9 and m6.10 with WAIC or LOO. Which model is expected to make better predictions? Which model provides the correct causal inference about the influence of age on happiness?
+
+``` {r}
+library(rethinking)
+d = sim_happiness(seed = 1977, N_years = 1000)
+precis(d)
+
+d2 = d[d$age >17, ]
+d2$A = (d2$age - 18)/(65-18)
+
+
+
+```
 
 
 
@@ -99,6 +163,36 @@ Informative priors reduce overfitting because they prevent the model from learni
 
 If parameters are too informative, they will prevent the sample from learning from the data. 
 
+
+
+
+## Notes:
+
+Review:
+
+Index variables for categorical variables:
+- Dummy: 0, 1 for each possible state results in basically n category intercepts
+- Assumes more uncertainty for some variables
+- Instead: index variables
+- Same prior for all categories
+Example:
+h ~ dnorm (mu, sigma),
+mu <- a[sex],
+a[sex] ~ dnorm(prior),
+sigma ~ dunif(prior)
+result is estimates of alpha for each sex.
+can calculate distribution of differences between categories with subtraction of columns in the posterior
+
+Fork: common cause of 2 things (open)
+- If both things are in model, only 1 might have non-zero parameter estimate
+- Either thing alone might have an effect. 
+- Once we know A, little additional information provided by B, but if we know B, A is still useful. 
+
+Pipe: middle term mediates relationship between 2 other variables (open)
+
+Collider: Z is a common result of 2 other variables (closed)
+
+Descendant: A descendant of the Z exists and is like a weaker version of Z 
 
 
 
