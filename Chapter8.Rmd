@@ -112,10 +112,12 @@ compare(m1.1, m1.2)
 
 ```
 
-The model that includes bed has lower WAIC, and so it fits the data better. I tihnk this indicates that although beds aren't strongly different from each other, knowing which bed a plant grew in gives you a bit of information about how many blooms it is likely to make. 
+The model that includes bed has lower WAIC, and so it fits the data a bit better. I think this indicates that although beds aren't strongly different from each other, knowing which bed a plant grew in gives you a bit of information about how many blooms it is likely to make. However, the difference in WAIC is small and the SE of the diff is large, so the more complex model may not be justified.
 
 
 ## 8H3 (7H3)
+
+
 
 ```{r}
 
@@ -148,7 +150,8 @@ hist(log(d$area))
 # Also going to center log area
 d$log.area.cent = log(d$area) - mean(log(d$area))
 hist(d$sd.growing.season)
-# Values in SD growing season aren't too wild, so leave them as is?
+# Also going to center sd
+d$sd.growing.season.cent = (d$sd.growing.season-mean(d$sd.growing.season))/sd(d$sd.growing.season)
 
 # A) Build a model of languages/capita ~ mean growing season + log(area)
 m4.1 <- quap(
@@ -161,7 +164,20 @@ m4.1 <- quap(
     sigma ~ dexp(1)
  ),
   data=d)
+
+prior = extract.prior(m4.1)
+
+data=data.frame(mean.growing.season.cent = c(min(d$mean.growing.season.cent), max(d$mean.growing.season.cent)), log.area.cent = c(min(d$log.area.cent), max(d$log.area.cent)))
+
+summary(d$mean.growing.season.cent)
+
+mu <- link(m4.1, post=prior, data = data)
+plot(NULL, xlim = c(-2.3, y = ))
+for (i in 1:50) lines(data[1,], mu[i,], col=col.alpha("black",0.3))
+
 precis(m4.1)
+
+
 
 ```
 

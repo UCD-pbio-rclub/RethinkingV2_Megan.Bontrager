@@ -105,7 +105,7 @@ sum(abs(bed) < 0.25)/length(bed)
 ```
 
 ```
-## [1] 0.6747
+## [1] 0.6884
 ```
 
 ```r
@@ -126,15 +126,15 @@ precis(m1.1, depth = 3)
 ```
 
 ```
-##              mean         sd        5.5%       94.5%
-## a      0.39305935 0.12596596  0.19174143  0.59437728
-## bw     0.20743722 0.02536550  0.16689824  0.24797619
-## bs    -0.11384932 0.02536088 -0.15438090 -0.07331774
-## bws   -0.14389321 0.03098438 -0.19341223 -0.09437418
-## bb[1] -0.12197417 0.12845587 -0.32727146  0.08332311
-## bb[2]  0.00116017 0.12845488 -0.20413553  0.20645587
-## bb[3]  0.01387256 0.12845498 -0.19142331  0.21916842
-## sigma  0.10814643 0.01467828  0.08468771  0.13160516
+##               mean         sd        5.5%       94.5%
+## a      0.393063400 0.12596593  0.19174552  0.59438128
+## bw     0.207437862 0.02536513  0.16689948  0.24797624
+## bs    -0.113846694 0.02536052 -0.15437770 -0.07331569
+## bws   -0.143888627 0.03098396 -0.19340698 -0.09437028
+## bb[1] -0.121981394 0.12845577 -0.32727852  0.08331573
+## bb[2]  0.001152369 0.12845478 -0.20414318  0.20644791
+## bb[3]  0.013866166 0.12845488 -0.19142954  0.21916188
+## sigma  0.108144851 0.01467775  0.08468698  0.13160272
 ```
 
 Bed A tends to have slightly fewer blooms, but it's cridble interval still overlaps with the other two beds. 
@@ -162,9 +162,9 @@ compare(m1.1, m1.2)
 ```
 
 ```
-##           WAIC    pWAIC    dWAIC    weight       SE      dSE
-## m1.1 -23.58269 9.708941 0.000000 0.6354401 10.04229       NA
-## m1.2 -22.47143 6.422703 1.111254 0.3645599 10.36673 7.737849
+##           WAIC    pWAIC    dWAIC   weight       SE      dSE
+## m1.1 -23.22795 9.855089 0.000000 0.634498 10.14558       NA
+## m1.2 -22.12483 6.542924 1.103125 0.365502 10.20330 7.608637
 ```
 
 The model that includes bed has lower WAIC, and so it fits the data better. I tihnk this indicates that although beds aren't strongly different from each other, knowing which bed a plant grew in gives you a bit of information about how many blooms it is likely to make. 
@@ -245,10 +245,10 @@ precis(m4.1)
 
 ```
 ##             mean        sd        5.5%        94.5%
-## a     -5.4451007 0.1587459 -5.69880723 -5.191394108
-## bmg    0.3224048 0.1421223  0.09526597  0.549543648
-## ba    -0.1901636 0.1179979 -0.37874703 -0.001580232
-## sigma  1.3830279 0.1128991  1.20259340  1.563462481
+## a     -5.4451011 0.1587460 -5.69880775 -5.191394375
+## bmg    0.3224049 0.1421223  0.09526599  0.549543819
+## ba    -0.1901637 0.1179979 -0.37874722 -0.001580274
+## sigma  1.3830287 0.1128992  1.20259388  1.563463431
 ```
 
 In my first model, mean growing season has a positive relationship with language diversity (94% CI  = 0.10-0.55), indicating that areas with long growing seasons (and perhaps greater food security) have a higher diversity of languages. This lends support for the hypothesis. Area tends to have a negative relationship with language diversity (though the 94% CI does not exclude 0), which I find surprising. I would think that large countries would have more potential to have isolated regions within them where language might diverge. 
@@ -272,10 +272,10 @@ precis(m4.2)
 
 ```
 ##             mean        sd       5.5%        94.5%
-## a     -5.0952284 0.3298800 -5.6224404 -4.568016395
-## bsd   -0.2111391 0.1732744 -0.4880650  0.065786889
-## ba    -0.2347988 0.1504900 -0.4753109  0.005713192
-## sigma  1.4248125 0.1154651  1.2402770  1.609347987
+## a     -5.0952280 0.3298800 -5.6224399 -4.568016136
+## bsd   -0.2111397 0.1732744 -0.4880656  0.065786198
+## ba    -0.2347985 0.1504899 -0.4753105  0.005713466
+## sigma  1.4248121 0.1154650  1.2402767  1.609347462
 ```
 While the estimate for the effect of growing season SD on language diversity is negative, it has a lot of uncertainty associated with it, so we can't be confident that it has a negative relationship with language diversity. 
 
@@ -301,12 +301,12 @@ precis(m4.3)
 
 ```
 ##              mean        sd       5.5%       94.5%
-## a     -4.90570086 0.3119556 -5.4042661 -4.40713563
-## bsd   -0.32131487 0.1650741 -0.5851352 -0.05749454
-## bmg    0.87904601 0.2300532  0.5113766  1.24671539
-## bsm   -0.31461799 0.1433704 -0.5437516 -0.08548442
-## ba    -0.02346292 0.1525750 -0.2673073  0.22038141
-## sigma  1.29596588 0.1052461  1.1277623  1.46416944
+## a     -4.90569959 0.3119548 -5.4042636 -4.40713563
+## bsd   -0.32131659 0.1650737 -0.5851362 -0.05749694
+## bmg    0.87904444 0.2300526  0.5113760  1.24671286
+## bsm   -0.31461912 0.1433700 -0.5437521 -0.08548619
+## ba    -0.02346378 0.1525746 -0.2673075  0.22037990
+## sigma  1.29596215 0.1052453  1.1277598  1.46416452
 ```
 
 The interaction between mean and standard deviation differs from 0, indicating that the effect of each of these two variables depends upon the other. 
