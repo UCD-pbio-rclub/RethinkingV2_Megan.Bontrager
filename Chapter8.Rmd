@@ -211,7 +211,8 @@ To understand, try plotting it:
 ```{r}
 mu_sd1 = link(m4.3, data = data.frame(sd.growing.season = 1, mean.growing.season.cent = seq(from = min(d$mean.growing.season.cent), to = max(d$mean.growing.season.cent), by = 0.5), log.area.cent = mean(d$log.area.cent)))
 
-plot(d$mean.growing.season.cent[d$sd.growing.season<1.5], d$log.lang.per.cap[d$sd.growing.season<1.5])
+# plot(d$log.lang.per.cap, d$mean.growing.season.cent)
+  # for (i in 1:20) lines(-1:1, mu_sd1[i,], col=col.alpha("black",0.3))
 ```
 
 Needs improvement: selection of priors, centering and scaling predictors

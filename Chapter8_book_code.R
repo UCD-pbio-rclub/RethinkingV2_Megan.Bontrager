@@ -222,6 +222,8 @@ for (s in -1:1) {
   for (i in 1:20) lines(-1:1, mu[i,], col=col.alpha("black",0.3))
 }
 
+
+
 ## R code 8.26
 set.seed(7)
 prior <- extract.prior(m8.6)
