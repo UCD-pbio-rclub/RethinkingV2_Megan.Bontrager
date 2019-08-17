@@ -18,6 +18,7 @@ knitr::opts_chunk$set(echo = TRUE)
 2) education leads to higher income, but the income returned for a given level of education depends on the field of work.
 3) gasoline makes a car go, but the speed achieved per unit gas might depend on whether you are driving uphill, downhill, or flat. 
 
+
 ## 8E2 (7E2)
 
 Statement 1. 
@@ -54,10 +55,12 @@ My expectation is that when there is very little prey, it doesn't matter haw man
 
 ## 8H1 (7H1) - assigned
 
-```{r}
-
+```{r, message=FALSE}
 # Load data
 library(rethinking)
+library(tidyverse)
+library(cowplot)
+
 data(tulips)
 d <- tulips
 
@@ -66,10 +69,7 @@ d$blooms_std <- d$blooms / max(d$blooms)
 d$water_cent <- d$water - mean(d$water)
 d$shade_cent <- d$shade - mean(d$shade)
 d$bed_index <- ifelse(d$bed == "a", 1, ifelse(d$bed == "b", 2, 3))
-
-# Add bed as an indexed variable. Use a prior that is centered on no effect of bed but with which is would be very plausible for bed to accout for differences of 25% in bloom number 
-bed <- rnorm(1e4, 0, 0.25)
-sum(abs(bed) < 0.25)/length(bed)
+# Add bed as an indexed variable. Use a prior that is centered on no effect of bed but with which is would be very plausible for bed to account for differences of 25% in bloom number 
 
 m1.1 <- quap(
   alist(
@@ -83,12 +83,71 @@ m1.1 <- quap(
     sigma ~ dexp(1)
  ),
   data=d)
+```
 
-precis(m1.1, depth = 3)
+Prior predictive simulation: what do these priors do, before seeing data?
+
+```{r, message=FALSE, warning=FALSE}
+prior <- extract.prior(m1.1, n = 50)
+
+# Attempting to make dataframe with Julin's approach, modified for 3 predictors. 
+pripred =
+  expand.grid(water_cent = c(-1, 0, 1),
+              shade_cent = c(-1, 0, 1),
+              bed_index = c(1, 2, 3)) %>%
+  as_tibble() %>%
+  mutate(key1 = bed_index, key2 = water_cent) %>%
+  group_by(key1, key2) %>%
+  nest() %>% 
+  mutate(pred = map(data, ~ as_tibble(rethinking::link(m1.1, post = prior, data = .)))) %>% 
+  unnest(pred) %>% 
+  rename(bed_index = key1, water_cent = key2, `-1` = V1, `0` = V2, `1` = V3) %>%
+  mutate(id = 1:nrow(.)) %>% 
+  gather(key = shade_cent, value = "blooms_std", -bed_index, -water_cent, -id) 
+```
+
+```{r, fig.height=5, fig.width=10}
+ggplot(data = pripred, aes(x = shade_cent, y = blooms_std, color = as.factor(bed_index), group = id)) +
+  geom_hline(yintercept = 0) +
+  geom_hline(yintercept = 1) +
+  geom_line(alpha = 0.5) +
+  facet_grid(.~water_cent)
+```
+
+Could reign things in a bit more, but this isn't *too* bad. 
+
+Now look at model:
+
+```{r, fig.height=5, fig.width=10}
+m1.1pred =
+  expand.grid(water_cent = c(-1, 0, 1),
+              shade_cent = c(-1, 0, 1),
+              bed_index = c(1, 2, 3)) %>%
+  as_tibble() %>%
+  # Note that whichever variable is not a key is the one that can go on the x-axis (I think)
+  mutate(key1 = bed_index, key2 = shade_cent) %>%
+  group_by(key1, key2) %>%
+  nest() %>% 
+  mutate(pred = map(data, ~ as_tibble(rethinking::link(m1.1, n = 50, data = .)))) %>% 
+  unnest(pred) %>% 
+  rename(bed_index = key1, shade_cent = key2, `-1` = V1, `0` = V2, `1` = V3) %>%
+  mutate(id = 1:nrow(.)) %>% 
+  # Would be nice to move this somewhere else (I think near the map line) so that grouping is more versatile. Is that possible?
+  gather(key = water_cent, value = "blooms_std", -bed_index, -shade_cent, -id) 
+
+precis(m1.1, depth = 2)
+
+ggplot(data = m1.1pred, aes(x = water_cent, y = blooms_std, color = as.factor(bed_index), group = id)) +
+  geom_hline(yintercept = 0) +
+  geom_hline(yintercept = 1) +
+  geom_line(alpha = 0.5) +
+  facet_grid(.~shade_cent)
 
 ```
 
-Bed A tends to have slightly fewer blooms, but it's cridble interval still overlaps with the other two beds. 
+Note that the prep code for this plot isn't totally versatile, ie., if you want to switch which variables are shown on the facet, x-axis, and color, you have to change the prep block, because (I think) the group ids are being created across the variable not used as a key, but within the two variables used as keys. It would be nice to do this differently so that the plot could be confiugred any way with the same prep code - can't wrap my mind around whether that's possible. 
+
+The results show that bed A tends to have slightly fewer blooms, but it's credible interval still overlaps with the other two beds. 
 
 
 ## 8H2 (7H2) - assigned
@@ -112,17 +171,236 @@ compare(m1.1, m1.2)
 
 ```
 
-The model that includes bed has lower WAIC, and so it fits the data a bit better. I think this indicates that although beds aren't strongly different from each other, knowing which bed a plant grew in gives you a bit of information about how many blooms it is likely to make. However, the difference in WAIC is small and the SE of the diff is large, so the more complex model may not be justified.
+The model that includes bed has lower WAIC, and so it fits the data a bit better. I think this indicates that although beds aren't strongly different from each other, knowing which bed a plant grew in gives you a bit more information about how many blooms it is likely to make. However, the difference in WAIC is small and the SE of the diff is large, so the more complex model may not be justified.
+
+```{r, fig.height=6}
+
+coeftab_plot(coeftab(m1.1, m1.2))
+
+```
+
+The uncertainty on the intercept is smaller in the model with bed; it seems like that uncertainty is instead represented in the $\beta$s for bed index.
 
 
 ## 8H3 (7H3)
 
+A) Compare models with and without Seychelles
 
+The model structure indicated in the question is slightly different from what's in the text of the paper. I like the version from the text better, but will check to see if it makes a difference.
 
 ```{r}
+data(rugged)
+d <- rugged
 
+# Make log version of outcome
+d$log_gdp <- log(d$rgdppc_2000)
+
+# Extract countries with GDP data
+dd <- d[complete.cases(d$rgdppc_2000), ]
+
+# Rescale variables
+dd$log_gdp_std <- dd$log_gdp / mean(dd$log_gdp)
+dd$rugged_std <- dd$rugged / max(dd$rugged)
+dd$cid = dd$cont_africa + 1 
+
+
+without_sey = dd %>% 
+  filter(country != "Seychelles")
+  
+# With Seychelles
+m3.1 <- quap(
+  alist(
+    log_gdp_std ~ dnorm(mu, sigma),
+    mu <- a[cid] + b[cid]*(rugged_std - mean(dd$rugged_std)),
+    a[cid] ~ dnorm(1, 0.1),
+    b[cid] ~ dnorm(0, 0.3),
+    sigma ~ dexp(1)
+ ), data = dd)
+
+# Without Seychelles
+m3.2 <- quap(
+  alist(
+    log_gdp_std ~ dnorm(mu, sigma),
+    mu <- a[cid] + b[cid]*(rugged_std - mean(dd$rugged_std)),
+    a[cid] ~ dnorm(1, 0.1),
+    b[cid] ~ dnorm(0, 0.3),
+    sigma ~ dexp(1)
+ ), data = without_sey)
+
+precis(m3.1, depth = 2)
+
+precis(m3.2, depth = 2)
 
 ```
+
+Alternate approach without indexing Africa variable. Maybe this is actually better, because it explicitly gives an estimate of the interaction rather than just fitting separate slopes. 
+
+```{r}
+# With Seychelles
+m3.3 <- quap(
+  alist(
+    log_gdp_std ~ dnorm(mu, sigma),
+    mu <- a + ba*(cont_africa) + br*(rugged_std - mean(dd$rugged_std)) + bar*(cont_africa)*(rugged_std - mean(dd$rugged_std)),
+    a ~ dnorm(1, 0.1),
+    br ~ dnorm(0, 0.3),
+    ba ~ dnorm(0, 0.3),
+    bar ~ dnorm(0, 0.3),
+    sigma ~ dexp(1)
+ ), data = dd)
+
+# Without Seychelles
+m3.4 <- quap(
+  alist(
+    log_gdp_std ~ dnorm(mu, sigma),
+    mu <- a + ba*(cont_africa) + br*(rugged_std - mean(dd$rugged_std)) + bar*(cont_africa)*(rugged_std - mean(dd$rugged_std)),
+    a ~ dnorm(1, 0.1),
+    br ~ dnorm(0, 0.3),
+    ba ~ dnorm(0, 0.3),
+    bar ~ dnorm(0, 0.3),
+    sigma ~ dexp(1)
+ ), data = without_sey)
+
+precis(m3.3, depth = 2)
+
+precis(m3.4, depth = 2)
+
+```
+
+The interaction intraval still doesn't include 0, but it's weakened when the Seychelles aren't included. 
+
+B) Plot model predictions
+
+```{r, fig.width=8}
+
+summary(dd$rugged_std)
+
+m3.3pred =
+  expand.grid(cont_africa = c(0, 1),
+              rugged_std = c(0, 0.5, 1)) %>%
+  as_tibble() %>%
+  # Note that whichever variable is not a key is the one that can go on the x-axis (I think)
+  mutate(key1 = cont_africa) %>%
+  group_by(key1) %>%
+  nest() %>% 
+  mutate(pred = map(data, ~ as_tibble(rethinking::link(m3.3, n = 200, data = .)))) %>% 
+  unnest(pred) %>% 
+  rename(cont_africa = key1, `0` = V1, `1` = V2) %>%
+  mutate(id = 1:nrow(.)) %>% 
+  # Would be nice to move this somewhere else (I think near the map line) so that grouping is more versatile. Is that possible?
+  gather(key = rugged_std, value = "GDP", -cont_africa, -id) 
+
+m3.4pred =
+  expand.grid(cont_africa = c(0, 1),
+              rugged_std = c(0, 0.5, 1)) %>%
+  as_tibble() %>%
+  # Note that whichever variable is not a key is the one that can go on the x-axis (I think)
+  mutate(key1 = cont_africa) %>%
+  group_by(key1) %>%
+  nest() %>% 
+  mutate(pred = map(data, ~ as_tibble(rethinking::link(m3.4, n = 200, data = .)))) %>% 
+  unnest(pred) %>% 
+  rename(cont_africa = key1, `0` = V1, `1` = V2) %>%
+  mutate(id = 1:nrow(.)) %>% 
+  # Would be nice to move this somewhere else (I think near the map line) so that grouping is more versatile. Is that possible?
+  gather(key = rugged_std, value = "GDP", -cont_africa, -id) 
+
+a = ggplot() +
+  geom_line(data = m3.3pred, aes(x = rugged_std, y = GDP, color = as.factor(cont_africa), group = id), alpha = 0.2) +
+  guides(color = FALSE) +
+  geom_smooth(data = m3.3pred, aes(x = rugged_std, y = GDP, group = as.factor(cont_africa), color = as.factor(cont_africa)), method = "lm", se  =FALSE)
+
+b = ggplot(data = m3.4pred, aes(x = rugged_std, y = GDP, color = as.factor(cont_africa), group = id)) +
+  geom_line(alpha = 0.2) +
+  guides(color = FALSE) +
+  geom_smooth(data = m3.4pred, aes(x = rugged_std, y = GDP, group = as.factor(cont_africa), color = as.factor(cont_africa)), method = "lm", se  =FALSE)
+
+
+plot_grid(a,b)
+```
+
+The interaction is somewhat weaker without Seychelles, that is, the African slope is a little bit flatter. 
+
+C) Compare 3 models without Seychelles: ruggedness only, ruggedness and continent, and ruggedness * continent. 
+
+Ruggedness * continent is model 3.4 above.
+
+```{r}
+# Ruggedness adn africa, no interaction
+m3.5 <- quap(
+  alist(
+    log_gdp_std ~ dnorm(mu, sigma),
+    mu <- a + ba*(cont_africa) + br*(rugged_std - mean(dd$rugged_std)),
+    a ~ dnorm(1, 0.1),
+    br ~ dnorm(0, 0.3),
+    ba ~ dnorm(0, 0.3),
+    sigma ~ dexp(1)
+ ), data = without_sey)
+
+
+# Ruggedness only
+m3.6 <- quap(
+  alist(
+    log_gdp_std ~ dnorm(mu, sigma),
+    mu <- a + br*(rugged_std - mean(dd$rugged_std)),
+    a ~ dnorm(1, 0.1),
+    br ~ dnorm(0, 0.3),
+    sigma ~ dexp(1)
+ ), data = without_sey)
+
+coeftab_plot(coeftab(m3.4, m3.5, m3.6))
+
+compare(m3.4, m3.5, m3.6)
+
+```
+
+The interaction model fits best, but not a whole lot better than the model without the interaction. 
+
+Plot model predictions:
+
+```{r, fig.width=10}
+
+m3.5pred =
+  expand.grid(cont_africa = c(0, 1),
+              rugged_std = c(0, 0.5, 1)) %>%
+  as_tibble() %>%
+  # Note that whichever variable is not a key is the one that can go on the x-axis (I think)
+  mutate(key1 = cont_africa) %>%
+  group_by(key1) %>%
+  nest() %>% 
+  mutate(pred = map(data, ~ as_tibble(rethinking::link(m3.5, n = 200, data = .)))) %>% 
+  unnest(pred) %>% 
+  rename(cont_africa = key1, `0` = V1, `1` = V2) %>%
+  mutate(id = 1:nrow(.)) %>% 
+  # Would be nice to move this somewhere else (I think near the map line) so that grouping is more versatile. Is that possible?
+  gather(key = rugged_std, value = "GDP", -cont_africa, -id) 
+
+m3.6pred =
+  expand.grid(rugged_std = c(0, 0.5, 1)) %>%
+  as_tibble() %>%
+  # Note that whichever variable is not a key is the one that can go on the x-axis (I think)
+  nest() %>% 
+  mutate(pred = map(data, ~ as_tibble(rethinking::link(m3.6, n = 200, data = .)))) %>% 
+  unnest(pred) %>% 
+  rename(`0` = V1, `0.5` = V2, `1` = V3) %>%
+  mutate(id = 1:nrow(.)) %>% 
+  # Would be nice to move this somewhere else (I think near the map line) so that grouping is more versatile. Is that possible?
+  gather(key = rugged_std, value = "GDP",  -id) 
+
+c = ggplot() +
+  geom_line(data = m3.5pred, aes(x = rugged_std, y = GDP, color = as.factor(cont_africa), group = id), alpha = 0.2) +
+  guides(color = FALSE) +
+  geom_smooth(data = m3.5pred, aes(x = rugged_std, y = GDP, group = as.factor(cont_africa), color = as.factor(cont_africa)), method = "lm", se  =FALSE)
+
+e = ggplot() +
+  geom_line(data = m3.6pred, aes(x = rugged_std, y = GDP, group = id), alpha = 0.2) +
+  guides(color = FALSE) +
+  geom_smooth(data = m3.6pred, aes(x = rugged_std, y = GDP, group = NA), method = "lm", se  =FALSE)
+
+plot_grid(b, c, e, ncol = 3)
+
+```
+
+I still think that incorporating the interaction is the best way to describe the data. 
 
 
 
@@ -131,6 +409,7 @@ The model that includes bed has lower WAIC, and so it fits the data a bit better
 Evaluate the hypothesis that language diversity is partly a product of food security. 
 
 ```{r}
+
 data(nettle)
 d <- nettle
 
@@ -139,85 +418,185 @@ d$lang.per.cap = d$num.lang/d$k.pop
 hist(d$lang.per.cap, breaks = 40)
 # Most countries have few languages/capita
 d$log.lang.per.cap = log(d$lang.per.cap)
-mean(d$log.lang.per.cap)
+summary(d$log.lang.per.cap)
+   # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+# -9.2814 -6.2196 -5.4952 -5.4566 -4.6111 -0.3842 
 
 # Some predictors of interest: mean.growing.season and sd.growing.season
-# Prior on intercept: most countries have few languages per capita, so the mean of the logged response is ~-5
+# Prior on intercept: most countries have few languages per capita, so the mean of the logged response is ~-5.5
 hist(d$mean.growing.season)
 # I'm going to center and scale mean growing season
 d$mean.growing.season.cent = (d$mean.growing.season-mean(d$mean.growing.season))/sd(d$mean.growing.season)
+summary(d$mean.growing.season.cent)
+#     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+# -2.23977 -0.53883  0.09972  0.00000  0.71283  1.57721 
+
 hist(log(d$area))
 # Also going to center log area
 d$log.area.cent = log(d$area) - mean(log(d$area))
+summary(d$log.area.cent)
+#     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+# -3.52662 -0.90595  0.04564  0.00000  0.95742  3.02207 
+    
 hist(d$sd.growing.season)
 # Also going to center sd
 d$sd.growing.season.cent = (d$sd.growing.season-mean(d$sd.growing.season))/sd(d$sd.growing.season)
+summary(d$sd.growing.season.cent)
+#     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+# -1.59387 -0.71448 -0.00862  0.00000  0.38300  3.91228 
 
 # A) Build a model of languages/capita ~ mean growing season + log(area)
 m4.1 <- quap(
   alist(
-    log(lang.per.cap) ~ dnorm(mu, sigma),
+    log.lang.per.cap ~ dnorm(mu, sigma),
     mu <- a + bmg*mean.growing.season.cent + ba*log.area.cent, 
     a ~ dnorm(-5, 1),
-    bmg ~ dnorm(0, 0.25),
-    ba ~ dnorm(0, 0.25),
+    bmg ~ dnorm(0, 0.8),
+    ba ~ dnorm(0, 0.8),
     sigma ~ dexp(1)
  ),
   data=d)
 
-prior = extract.prior(m4.1)
+# Check how these priors are working. 
+prior = extract.prior(m4.1, n = 200)
 
-data=data.frame(mean.growing.season.cent = c(min(d$mean.growing.season.cent), max(d$mean.growing.season.cent)), log.area.cent = c(min(d$log.area.cent), max(d$log.area.cent)))
-
-summary(d$mean.growing.season.cent)
-
-mu <- link(m4.1, post=prior, data = data)
-plot(NULL, xlim = c(-2.3, y = ))
-for (i in 1:50) lines(data[1,], mu[i,], col=col.alpha("black",0.3))
-
-precis(m4.1)
-
-
+pripred =
+  expand.grid(mean.growing.season.cent = c(-2.2, 0, 1.5),
+              log.area.cent = c(-3.5, 0, 3)) %>%
+  as_tibble() %>%
+  mutate(key1 = log.area.cent) %>%
+  group_by(key1) %>%
+  nest() %>% 
+  mutate(pred = map(data, ~ as_tibble(rethinking::link(m4.1, post = prior, data = .)))) %>% 
+  unnest(pred) %>% 
+  rename(log.area.cent = key1, `-2.2` = V1, `0` = V2, `1.5` = V3) %>%
+  mutate(id = 1:nrow(.)) %>% 
+  gather(key = mean.growing.season.cent, value = "lang_div", -log.area.cent, -id) 
 
 ```
 
-In my first model, mean growing season has a positive relationship with language diversity (94% CI  = 0.10-0.55), indicating that areas with long growing seasons (and perhaps greater food security) have a higher diversity of languages. This lends support for the hypothesis. Area tends to have a negative relationship with language diversity (though the 94% CI does not exclude 0), which I find surprising. I would think that large countries would have more potential to have isolated regions within them where language might diverge. 
+Visualize prior predictions:
+
+```{r, fig.height=5, fig.width=10}
+ggplot(data = pripred, aes(x = as.numeric(mean.growing.season.cent), y = lang_div, color = as.factor(log.area.cent), group = id)) +
+  geom_line(alpha = 0.5) +
+  facet_grid(.~log.area.cent)
+```
+This seems ok, maybe the slopes are a bit constrained?
+
+
+Now plot model predictions:
+
+```{r, fig.height=5, fig.width=10}
+m4.1pred =
+  expand.grid(mean.growing.season.cent = c(-2.2, 0, 1.5),
+              log.area.cent = c(-3.5, 0, 3)) %>%
+  as_tibble() %>%
+  mutate(key1 = log.area.cent) %>%
+  group_by(key1) %>%
+  nest() %>% 
+  mutate(pred = map(data, ~ as_tibble(rethinking::link(m4.1, n=200, data = .)))) %>% 
+  unnest(pred) %>% 
+  rename(log.area.cent = key1, `-2.2` = V1, `0` = V2, `1.5` = V3) %>%
+  mutate(id = 1:nrow(.)) %>% 
+  gather(key = mean.growing.season.cent, value = "lang_div", -log.area.cent, -id) 
+
+ggplot(data = m4.1pred, aes(x = as.numeric(mean.growing.season.cent), y = lang_div, color = as.factor(log.area.cent), group = id)) +
+  geom_line(alpha = 0.5) +
+  facet_grid(.~log.area.cent)
+
+```
+
+There is a positive relationship between growing season and language diversity, but a trending negative relationship between area and language diversity.
+
+Also want to build a model with area only for comparison.
 
 ```{r}
-# B) Build a model of languages/capita ~ sd growing season + log(area)
 m4.2 <- quap(
   alist(
-    log(lang.per.cap) ~ dnorm(mu, sigma),
-    mu <- a + bsd*sd.growing.season + ba*log.area.cent, 
+    log.lang.per.cap ~ dnorm(mu, sigma),
+    mu <- a + ba*log.area.cent, 
     a ~ dnorm(-5, 1),
-    bsd ~ dnorm(0, 1),
-    ba ~ dnorm(0, 1),
+    ba ~ dnorm(0, 0.8),
     sigma ~ dexp(1)
  ),
   data=d)
 
-precis(m4.2)
+coeftab_plot(coeftab(m4.1, m4.2))
+
+# Compare with AIC
+
+compare(m4.1, m4.2)
 
 ```
-While the estimate for the effect of growing season SD on language diversity is negative, it has a lot of uncertainty associated with it, so we can't be confident that it has a negative relationship with language diversity. 
 
+In my first model, mean growing season has a positive relationship with language diversity (94% CI  = 0.10-0.55), indicating that areas with long growing seasons (and perhaps greater food security) have a higher diversity of languages. This lends support for the suggested hypothesis. Area tends to have a negative relationship with language diversity (though the 94% CI does not exclude 0), which I find surprising. I would think that large countries would have more potential to have isolated regions within them where language might diverge. The model that includes mean growing season has a marginally lower WAIC score, it's not super strongly justified but explains the data somewhat better than area only.
 
 ```{r}
-# C) Build a model of languages/capita ~ sd growing season*mean growing season + log(area)
+
+# B) Build a model of languages/capita ~ sd growing season + log(area)
 m4.3 <- quap(
   alist(
     log(lang.per.cap) ~ dnorm(mu, sigma),
-    mu <- a + bsd*sd.growing.season + bmg*mean.growing.season.cent + bsm*mean.growing.season.cent*sd.growing.season + ba*log.area.cent, 
+    mu <- a + bsd*sd.growing.season.cent + ba*log.area.cent, 
     a ~ dnorm(-5, 1),
-    bsd ~ dnorm(0, 1),
-    bmg ~ dnorm(0, 1),
-    bsm ~ dnorm(0, 1),
-    ba ~ dnorm(0, 1),
+    bsd ~ dnorm(0, 0.8),
+    ba ~ dnorm(0, 0.8),
     sigma ~ dexp(1)
  ),
   data=d)
 
 precis(m4.3)
+
+m4.3pred =
+  expand.grid(sd.growing.season.cent = c(-1.5, 0, 3.5),
+              log.area.cent = c(-3.5, 0, 3)) %>%
+  as_tibble() %>%
+  mutate(key1 = log.area.cent) %>%
+  group_by(key1) %>%
+  nest() %>% 
+  mutate(pred = map(data, ~ as_tibble(rethinking::link(m4.3, n=200, data = .)))) %>% 
+  unnest(pred) %>% 
+  rename(log.area.cent = key1, `-1.5` = V1, `0` = V2, `3.5` = V3) %>%
+  mutate(id = 1:nrow(.)) %>% 
+  gather(key = sd.growing.season.cent, value = "lang_div", -log.area.cent, -id) 
+
+ggplot(data = m4.3pred, aes(x = as.numeric(sd.growing.season.cent), y = lang_div, color = as.factor(log.area.cent), group = id)) +
+  geom_line(alpha = 0.5) +
+  facet_grid(.~log.area.cent)
+
+```
+While the estimate for the effect of growing season SD on language diversity is negative, it has a lot of uncertainty associated with it, so we can't be confidentin that relationship. You can see that unceratinty in the variable slopes of the lines.
+
+
+```{r}
+# C) Build a model of languages/capita ~ sd growing season*mean growing season + log(area)
+m4.4 <- quap(
+  alist(
+    log(lang.per.cap) ~ dnorm(mu, sigma),
+    mu <- a + bsd*sd.growing.season.cent + bmg*mean.growing.season.cent + bsm*mean.growing.season.cent*sd.growing.season.cent + ba*log.area.cent, 
+    a ~ dnorm(-5, 1),
+    bsd ~ dnorm(0, 0.8),
+    bmg ~ dnorm(0, 0.8),
+    bsm ~ dnorm(0, 0.8),
+    ba ~ dnorm(0, 0.8),
+    sigma ~ dexp(1)
+ ),
+  data=d)
+
+precis(m4.4)
+
+# compare(m4.4, m4.3, m4.2, m4.1)
+# Get error: Error in data[[outcome]] : no such index at level 1
+
+WAIC(m4.1)
+# Works
+WAIC(m4.2)
+# Works
+# WAIC(m4.3)
+# Error
+# WAIC(m4.4)
+# Error
 ```
 
 The interaction between mean and standard deviation differs from 0, indicating that the effect of each of these two variables depends upon the other. 
@@ -225,10 +604,23 @@ The interaction between mean and standard deviation differs from 0, indicating t
 To understand, try plotting it:
 
 ```{r}
-mu_sd1 = link(m4.3, data = data.frame(sd.growing.season = 1, mean.growing.season.cent = seq(from = min(d$mean.growing.season.cent), to = max(d$mean.growing.season.cent), by = 0.5), log.area.cent = mean(d$log.area.cent)))
+m4.4pred =
+  expand.grid(sd.growing.season.cent = c(-1.5, 0, 3.5),
+              log.area.cent = c(-3.5, 0, 3),
+              mean.growing.season.cent = c(-2.2, 0, 1.5)) %>%
+  as_tibble() %>%
+  # Note that whichever variable is not a key is the one that can go on the x-axis (I think)
+  mutate(key1 = sd.growing.season.cent, key2 = log.area.cent) %>%
+  group_by(key1, key2) %>%
+  nest() %>% 
+  mutate(pred = map(data, ~ as_tibble(link(m4.4, n = 50, data = .)))) %>% 
+  unnest(pred) %>% 
+  rename(sd.growing.season.cent = key1, log.area.cent = key2, `-2.2` = V1, `0` = V2, `1.5` = V3) %>%
+  mutate(id = 1:nrow(.)) %>% 
+  # Would be nice to move this somewhere else (I think near the map line) so that grouping is more versatile. Is that possible?
+  gather(key = mean.growing.season.cent, value = "lang_div", -sd.growing.season.cent, -log.area.cent, -id) 
 
-# plot(d$log.lang.per.cap, d$mean.growing.season.cent)
-  # for (i in 1:20) lines(-1:1, mu_sd1[i,], col=col.alpha("black",0.3))
+ggplot(data = m4.4pred, aes(x = as.numeric(mean.growing.season.cent), y = lang_div, color = as.factor(sd.growing.season.cent), group = id)) +
+  geom_line(alpha = 0.5) +
+  facet_grid(.~log.area.cent)
 ```
-
-Needs improvement: selection of priors, centering and scaling predictors
