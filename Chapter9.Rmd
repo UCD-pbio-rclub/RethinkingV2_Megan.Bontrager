@@ -38,7 +38,7 @@ HMC can't handle discrete parameters, because it can't calculate a gradient acro
 
 Re-estimate the terrain ruggedness model from the chapter, but now using a uniform prior and an exponential prior for the standard deviation, sigma. The uniform prior should be dunif(0,10) and the exponential should be dexp(1). Do the different priors have any detectible influence on the posterior distribution?
 
-```{r}
+```{r, cache=TRUE}
 
 data(rugged)
 d <- rugged
@@ -63,7 +63,7 @@ m9.1a <- ulam(
         b[cid] ~ dnorm( 0 , 0.3 ) ,
         sigma ~ dexp( 1 )
 ),
-data=dat_slim , chains=4 , cores=4 , iter=1000 )
+data=dat_slim , chains=2 , cores=4 , iter=1000 )
 
 m9.1b <- ulam(
     alist(
@@ -73,7 +73,7 @@ m9.1b <- ulam(
         b[cid] ~ dnorm( 0 , 0.3 ) ,
         sigma ~ dcauchy( 0 , 1 )
 ),
-data=dat_slim , chains=4 , cores=4 , iter=1000 )
+data=dat_slim , chains=2 , cores=4 , iter=1000 )
 
 m9.1c <- ulam(
     alist(
@@ -83,7 +83,7 @@ m9.1c <- ulam(
         b[cid] ~ dnorm( 0 , 0.3 ) ,
         sigma ~ dunif( 0, 10 )
 ),
-data=dat_slim , chains=4 , cores=4 , iter=1000 )
+data=dat_slim , chains=2 , cores=4 , iter=1000 )
 
 precis(m9.1a, depth = 2)
 precis(m9.1b, depth = 2)
@@ -99,7 +99,7 @@ Altering these priors does not have any impact on the estimates of the posterior
 
 The Cauchy and exponential priors from the terrain ruggedness model are very weak. They can be made more informative by reducing their scale. Compare the dcauchy and dexp priors for progressively smaller values of the scaling parameter. As these priors become stronger, how does each influence the posterior distribution?
 
-```{r}
+```{r, cache=TRUE}
 m9.1d <- ulam(
     alist(
         log_gdp_std ~ dnorm( mu , sigma ) ,
@@ -108,7 +108,7 @@ m9.1d <- ulam(
         b[cid] ~ dnorm( 0 , 0.3 ) ,
         sigma ~ dexp( 1)
 ),
-data=dat_slim , chains=4 , cores=4 , iter=1000 )
+data=dat_slim , chains=2 , cores=4 , iter=1000 )
 
 
 m9.1e <- ulam(
@@ -117,9 +117,9 @@ m9.1e <- ulam(
         mu <- a[cid] + b[cid]*( rugged_std - 0.215 ) ,
         a[cid] ~ dnorm( 1 , 0.1 ) ,
         b[cid] ~ dnorm( 0 , 0.3 ) ,
-        sigma ~ dexp( 0.1)
+        sigma ~ dexp( 10)
 ),
-data=dat_slim , chains=4 , cores=4 , iter=1000 )
+data=dat_slim , chains=2 , cores=4 , iter=1000 )
 
 
 m9.1f <- ulam(
@@ -128,9 +128,9 @@ m9.1f <- ulam(
         mu <- a[cid] + b[cid]*( rugged_std - 0.215 ) ,
         a[cid] ~ dnorm( 1 , 0.1 ) ,
         b[cid] ~ dnorm( 0 , 0.3 ) ,
-        sigma ~ dexp( 0.01)
+        sigma ~ dexp( 100)
 ),
-data=dat_slim , chains=4 , cores=4 , iter=1000 )
+data=dat_slim , chains=2 , cores=4 , iter=1000 )
 
 precis(m9.1d, depth = 2)
 precis(m9.1e, depth = 2)
@@ -144,7 +144,7 @@ m9.1g <- ulam(
         b[cid] ~ dnorm( 0 , 0.3 ) ,
         sigma ~ dcauchy( 0, 1)
 ),
-data=dat_slim , chains=4 , cores=4 , iter=1000 )
+data=dat_slim , chains=2 , cores=4 , iter=1000 )
 m9.1h <- ulam(
     alist(
         log_gdp_std ~ dnorm( mu , sigma ) ,
@@ -153,7 +153,7 @@ m9.1h <- ulam(
         b[cid] ~ dnorm( 0 , 0.3 ) ,
         sigma ~ dcauchy( 0, 0.1)
 ),
-data=dat_slim , chains=4 , cores=4 , iter=1000 )
+data=dat_slim , chains=2 , cores=4 , iter=1000 )
 m9.1i <- ulam(
     alist(
         log_gdp_std ~ dnorm( mu , sigma ) ,
@@ -162,7 +162,7 @@ m9.1i <- ulam(
         b[cid] ~ dnorm( 0 , 0.3 ) ,
         sigma ~ dcauchy( 0, 0.01)
 ),
-data=dat_slim , chains=4 , cores=4 , iter=1000 )
+data=dat_slim , chains=2 , cores=4 , iter=1000 )
 
 precis(m9.1g, depth = 2)
 precis(m9.1h, depth = 2)
@@ -176,13 +176,13 @@ Varying the exponenetial prior on sigma didn't have a big effect. Same with the 
 
 Run the model below and then inspect the posterior distribution and explain what it is accomplishing.
 
-```{R} 
+```{R, cache = TRUE} 
 # R code 9.26
 mp <- ulam(alist(a ~ dnorm(0,1),
                      b ~ dcauchy(0,1)),
                data=list(y=1),
                start=list(a=0,b=0),
-               chains=4 , cores=4 , iter=1000 )
+               chains=2 , cores=4 , iter=1000 )
 
 pairs(mp)
 traceplot(mp)
@@ -193,11 +193,48 @@ The model is sampling from a normal distribution and a cauchy distribution. The 
 
 ## 8H2
 
-Recall the divorce rate example from Chapter5. Repeat that analysis, usingmap2stanthistime, fitting models m5.1, m5.2, and m5.3.  Use compare to compare the models on the basis of WAIC. Explain the results.
+Recall the divorce rate example from Chapter 5. Repeat that analysis, using map2stan thistime, fitting models m5.1, m5.2, and m5.3.  Use compare to compare the models on the basis of WAIC. Explain the results.
 
-```{R}
+```{R, cache = TRUE}
 
+data(WaffleDivorce)
+d <- WaffleDivorce
+
+# standardize variables
+d$A <- scale( d$MedianAgeMarriage )
+d$D <- scale( d$Divorce )
+d$M <- scale( d$Marriage )
+
+wh = list(A = d$A, D = d$D, M = d$M)
+
+
+m5.1 <- ulam(alist(D ~ dnorm( mu , sigma ) ,
+                   mu <- a + bA * A ,
+                   a ~ dnorm( 0 , 0.2 ) ,
+                   bA ~ dnorm( 0 , 0.5 ) ,
+                   sigma ~ dexp( 1 )) , 
+             data = wh, chains=2 , cores=4 , iter=1000, log_lik = TRUE)
+
+
+m5.2 <- ulam(alist(D ~ dnorm( mu , sigma ) , 
+                   mu <- a + bM * M , 
+                   a ~ dnorm( 0 , 0.2 ) ,
+                   bM ~ dnorm( 0 , 0.5 ) ,
+                   sigma ~ dexp( 1 )) ,
+             data = wh, chains=2 , cores=4 , iter=1000, log_lik = TRUE)
+
+
+m5.3 <- ulam(alist(D ~ dnorm( mu , sigma ) ,
+                   mu <- a + bM*M + bA*A ,
+                   a ~ dnorm( 0 , 0.2 ) ,
+                   bM ~ dnorm( 0 , 0.5 ) ,
+                   bA ~ dnorm( 0 , 0.5 ) , 
+                   sigma ~ dexp( 1 )) ,
+             data = wh, chains=2 , cores=4 , iter=1000, log_lik = TRUE)
+
+compare(m5.1, m5.2, m5.3)
 ```
+
 
 
 
