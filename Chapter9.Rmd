@@ -235,14 +235,175 @@ m5.3 <- ulam(alist(D ~ dnorm( mu , sigma ) ,
 compare(m5.1, m5.2, m5.3)
 ```
 
+The model with median age of marriage only is the best.
 
 
 
-## optional: 8H6
+## 8E4
 
-Modify the Metropolis algorithm code from the chapter to write your own simple MCMCestimator for globe tossing data and model from Chapter2.
+Explain the difference between the effective number of samples, n_eff as calculated by Stan, and the actual number of samples.
+
+The effective number of samples takes into account the amount of autocorrelation betwee the samples, which is often low when using HMC. As a result, the number of effective samples may be lower than the actual number (if there is some autocorrelation) or could be more than the number of samples (I don't really understand how it ends up being > the actual number of samples).
 
 
+## 8M3
+
+Re-estimate one of the Stan models from the chapter, but at different numbers of warmup iterations. Be sure to use the same number of sampling iterations in each case. Compare the n_eff values. How much warmup is enough?
+
+```{r, cache = TRUE}
+
+str(dat_slim)
+
+# First with warmup = 500
+
+m9.1.500 <- ulam(
+    alist(
+        log_gdp_std ~ dnorm(mu, sigma),
+        mu <- a[cid] + b[cid]*(rugged_std - 0.215),
+        a[cid] ~ dnorm(1 , 0.1) ,
+        b[cid] ~ dnorm(0 , 0.3) ,
+        sigma ~ dexp(1)
+),
+data=dat_slim , chains=2 , cores=4 , iter=1000, warmup = 500)
+
+# Now trying 200
+
+m9.1.200 <- ulam(
+    alist(
+        log_gdp_std ~ dnorm(mu, sigma),
+        mu <- a[cid] + b[cid]*(rugged_std - 0.215),
+        a[cid] ~ dnorm(1 , 0.1) ,
+        b[cid] ~ dnorm(0 , 0.3) ,
+        sigma ~ dexp(1)
+),
+data=dat_slim , chains=2 , cores=4 , iter=700, warmup = 200)
+
+# Now 50
+
+m9.1.50 <- ulam(
+    alist(
+        log_gdp_std ~ dnorm(mu, sigma),
+        mu <- a[cid] + b[cid]*(rugged_std - 0.215),
+        a[cid] ~ dnorm(1 , 0.1) ,
+        b[cid] ~ dnorm(0 , 0.3) ,
+        sigma ~ dexp(1)
+),
+data=dat_slim , chains=2 , cores=4 , iter=550, warmup = 50)
+
+# Now 10
+m9.1.10 <- ulam(
+    alist(
+        log_gdp_std ~ dnorm(mu, sigma),
+        mu <- a[cid] + b[cid]*(rugged_std - 0.215),
+        a[cid] ~ dnorm(1 , 0.1) ,
+        b[cid] ~ dnorm(0 , 0.3) ,
+        sigma ~ dexp(1)
+),
+data=dat_slim , chains=2 , cores=4 , iter=510, warmup = 10)
 
 
+precis(m9.1.500, depth = 2)
+precis(m9.1.200, depth = 2)
+precis(m9.1.50, depth = 2)
+precis(m9.1.10, depth = 2)
+
+```
+
+Even a warmup of just 50 iterations produces effective sample sizes > 200. But dropping down to 10 results in some warnings: 
+
+WARNING: No variance estimation is performed for num_warmup < 20
+
+There were 2 chains where the estimated Bayesian Fraction of Missing Information was low. See http://mc-stan.org/misc/warnings.html#bfmi-lowExamine the pairs() plot to diagnose sampling problems
+
+Need to figure out some terminology: iteration, transition, sample. Are these all the same, i.e., 500 iterations after warmp = 500 transitions and results in 500 samples?
+
+
+## 8H3
+
+Sometimes changing a prior for one parameter has unanticipated effects on other parameters. This is because when a parameter is highly correlated with another parameter in the posterior, the prior influences both parameters. Here’s an example to work and think through.
+
+Go back to the leg length example in Chapter 5. Here is the code again, which simulates height and leg lengths for 100 imagined individuals:
+
+```{r}
+# R code 9.26
+N <- 100
+height <- rnorm(N,10,2)
+leg_prop <- runif(N,0.4,0.5)
+leg_left <- leg_prop*height +
+    rnorm( N , 0 , 0.02 )
+leg_right <- leg_prop*height +
+    rnorm( N , 0 , 0.02 )
+d <- data.frame(height,leg_left,leg_right)
+# number of individuals
+# sim total height of each
+# leg as proportion of height
+# sim left leg as proportion + error
+# sim right leg as proportion + error
+# combine into data frame
+plot(d$leg_left, d$leg_right)
+# Very correlated, good for standina and walking.
+```
+
+And below is the model you fit before, resulting in a highly correlated posterior for the two beta parameters. This time, fit the model using map2stan:
+
+```{r, cache = TRUE}
+# R code 9.27
+m5.8s <- ulam(
+    alist(
+        height ~ dnorm(mu, sigma),
+        mu <- a + bl*leg_left + br*leg_right,
+        a ~ dnorm(10, 100),
+        bl ~ dnorm(2, 10),
+        br ~ dnorm(2, 10),
+        sigma ~ dcauchy(0, 1)
+),
+data = d, chains = 4, start = list(a = 10, bl = 0, br = 0, sigma = 1), log_lik = TRUE)
+
+```
+
+Compare the posterior distribution produced by the code above to the posterior distribution produced when you change the prior for br so that it is strictly positive:
+
+```{r, cache = TRUE}
+# R code 9.29
+m5.8s2 <- map2stan(
+    alist(
+        height ~ dnorm(mu, sigma),
+        mu <- a + bl*leg_left + br*leg_right,
+        a ~ dnorm(10, 100),
+        bl ~ dnorm(2, 10),
+        br ~ dnorm(2, 10) & T[0, ],
+        sigma ~ dcauchy(0, 1)
+),
+data = d, chains = 4, start = list(a = 10, bl = 0, br = 0, sigma = 1), log_lik = TRUE)
+```
+
+Note that T[0,] on the right-hand side of the prior for br. What the T[0,] does is truncate the normal distribution so that it has positive probability only above zero. In other words, that prior ensures that the posterior distribution for br will have no probability mass below zero.
+
+Compare the two posterior distributions for m5.8s and m5.8s2. What has changed in the posterior distribution of both beta parameters? Can you explain the change induced by the change in prior?
+
+```{r}
+precis(m5.8s, depth = 2)
+
+precis(m5.8s2, depth = 2)
+
+pairs(m5.8s)
+pairs(m5.8s2)
+
+```
+
+By constraining the right leg parameter to be positive, it means that the left leg parameter is sometimes more negative than when the right leg is unconstrained, so the posterior for the left leg has a longer negative tail and the right leg parameter has a longer positive tail. 
+
+
+## 8H4
+
+For the two models fit in the previous problem, use DIC or WAIC to compare the effective numbers of parameters for each model. Which model has more effective parameters? Why?
+
+```{r, cache = TRUE}
+
+WAIC(m5.8s) # pWAIC = 4.06
+WAIC(m5.8s2) # pWAIC = 3.69
+
+```
+
+The number of effective parameters is slightly lower for the model with the constrained prior on the right leg. Perhaps this is because that parameter is less "unknown" in the second model, so it doesn't contribute as much to the variance in log-probability?
 
