@@ -335,12 +335,17 @@ All of the interactions still overlap with 0, but some trend positive or negativ
 
 
 ```r
-predictions = data.frame(wineamer = c(0,0,0,0,1,1,1,1),
-                         judgeamer = c(1,1,0,0,1,1,0,0),
-                         flight = c(1,0,1,0,1,0,1,0))
-means = data.frame(link(mod3, predictions)) %>% 
-  gather()
+predictions = data.frame(wineamer = c(1,1,1,1,2,2,2,2),
+                         judgeamer = c(2,2,1,1,2,2,1,1),
+                         flight = c(2,1,2,1,2,1,2,1))
 
+means = data.frame(link(mod3, predictions)) %>% 
+  rename(FW_AJ_WW = X1, FW_AJ_RW = X2, FW_FJ_WW = X3, FW_FJ_RW = X4, AW_AJ_WW = X5, AW_AJ_RW = X6, AW_FJ_WW = X7, AW_FJ_RW = X8) %>% 
+  gather()
+```
+
+
+```r
 ggplot(means, aes(x = value)) +
   geom_histogram() +
   facet_grid(key ~ .)
@@ -350,6 +355,6 @@ ggplot(means, aes(x = value)) +
 ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 ```
 
-![](Chapter10_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
+![](Chapter10_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
 
 
