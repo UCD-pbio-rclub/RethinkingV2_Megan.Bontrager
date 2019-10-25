@@ -50,30 +50,119 @@ table(w$wine, w$wineind)
 wslim = w %>% select(scorestd, judgeind, wineind)
 ```
 
-Now try some priors:
+Now fit a model:
 
-```{r}
+```{r, cache = TRUE}
 mod1 = ulam(alist(
-  score.std ~ dnorm(mu, sigma),
-            mu <- jB[judge.ind] + wB[wine.ind],
-            jB ~ dnorm(0, 1),
-            wB ~ dnorm(0, 1),
+  scorestd ~ dnorm(mu, sigma),
+            mu <- jB[judgeind] + wB[wineind],
+            jB[judgeind] ~ dnorm(0, 1),
+            wB[wineind] ~ dnorm(0, 1),
             sigma ~ dexp(1)),
             data = wslim,
-            chains = 4
+            chains = 4, cores = 2, iter = 2e3
             )
 ```
 
+Look at the results:
+
+```{r}
+
+precis(mod1, depth = 2)
+
+plot(precis(mod1, depth = 2))
+
+```
+
+From this, we can see that some judges tend to rate wines more highly, and some wines are, on average, less liked than average, and some are more liked. Judges 4 and 8 tend to rate wines lower, and judges 5 and 6 tend to rate wines higher. Wines 6 and 18 were disliked, and wines 20 and 4 were liked a lot.
+
+```{r}
+traceplot(mod1)
+
+```
+
+The traceplots and the Rhats look ok.
 
 ## Q2. 
+
 Now consider three features of the wines and judges:
 (1) flight: Whether the wine is red or white.
 (2) wine.amer: Indicator variable for American wines. 
 (3) judge.amer: Indicator variable for American judges.
 Use indicator or index variables to model the influence of these features on the scores. Omit the individual judge and wine index variables from Problem 1. Do not include interaction effects yet. Again use ulam, justify your priors, and be sure to check the chains. What do you conclude about the differences among the wines and judges? Try to relate the results to the inferences in Problem 1.
 
+```{r, cache = TRUE}
+wslim2 = w %>% select(scorestd, wineamer = wine.amer, judgeamer = judge.amer, flight) %>% 
+  mutate(wineamer = wineamer + 1, judgeamer = judgeamer + 1, flight = as.integer(flight))
+
+mod2  = ulam(alist(
+  scorestd ~ dnorm(mu, sigma),
+            mu <- jB[judgeamer] + wB[wineamer] + fB[flight],
+            jB[judgeamer] ~ dnorm(0, 1),
+            wB[wineamer] ~ dnorm(0, 1),
+            fB[flight] ~ dnorm(0, 1),
+            sigma ~ dexp(1)),
+            data = wslim2,
+            chains = 4, cores = 2, iter = 2e3
+            )
+
+```
+
+Look at the results:
+
+```{r}
+
+precis(mod2, depth = 2)
+
+plot(precis(mod2, depth = 2))
+
+```
+
+There aren't strong effects of wine origin or judge origin. French judges (category 1) tended to rate wines lower, and American wines (category 2) tended to be rated lower, but there is a ton of varation around these estimates. Red and white wines were equally favored.
 
 
 ## Q3. 
 Now consider two-way interactions among the three features. You should end up with three different interaction terms in your model. These will be easier to build, if you use indicator variables. Again use ulam, justify your priors, and be sure to check the chains. Explain what each interaction means. Be sure to interpret the model’s predictions on the outcome scale (mu, the expected score), not on the scale of individual parameters. You can use link to help with this, or just use your knowledge of the linear model instead.
 What do you conclude about the features and the scores? Can you relate the results of your model(s) to the individual judge and wine inferences from Problem 1?
+
+```{r, cache = TRUE}
+
+mod3  = ulam(alist(
+  scorestd ~ dnorm(mu, sigma),
+            mu <- jB*judgeamer + wB*wineamer + fB*flight +
+                  jwB*judgeamer*wineamer + jfB*judgeamer*flight + fwB*wineamer*flight,
+            jB ~ dnorm(0, 1),
+            wB ~ dnorm(0, 1),
+            fB ~ dnorm(0, 1),
+            jwB ~ dnorm(0, 0.5),
+            jfB ~ dnorm(0, 0.5),
+            fwB ~ dnorm(0, 0.5),
+            sigma ~ dexp(1)),
+            data = wslim2,
+            chains = 4, cores = 2, iter = 2e3
+            )
+
+```
+
+```{r}
+precis(mod3)
+
+plot(precis(mod3))
+```
+
+All of the interactions still overlap with 0, but some trend positive or negative. Now generate predictions for different combinations of wine, judge, and flight to make these effects more interpretable. 
+
+```{r}
+predictions = data.frame(wineamer = c(0,0,0,0,1,1,1,1),
+                         judgeamer = c(1,1,0,0,1,1,0,0),
+                         flight = c(1,0,1,0,1,0,1,0))
+means = data.frame(link(mod3, predictions)) %>% 
+  gather()
+
+ggplot(means, aes(x = value)) +
+  geom_histogram() +
+  facet_grid(key ~ .)
+
+```
+
+
