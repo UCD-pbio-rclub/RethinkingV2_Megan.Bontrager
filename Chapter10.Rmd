@@ -1,0 +1,79 @@
+---
+title: "Chapter10"
+author: "Megan Bontrager"
+date: "10/25/2019"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rethinking)
+library(tidyverse)
+```
+
+## Q1. 
+Consider the data Wines2012. These data are expert ratings of 20 different French and American wines by 9 different French and American judges. Your goal is to model score, the subjective rating assigned by each judge to each wine. I recommend standardizing it.
+In this first problem, consider only variation among judges and wines. Construct index variables of judge and wine and then use these index variables to construct a linear regression model. Justify your priors. You should end up with 9 judge parameters and 20 wine parameters. Use ulam instead of quap to build this model, and be sure to check the chains for convergence. If you’d rather build the model directly in Stan or PyMC3, go ahead. I just want you to use Hamiltonian Monte Carlo instead of quadratic approximation.
+How do you interpret the variation among individual judges and individual wines? Do you notice any patterns, just by plotting the differences? Which judges gave the highest/lowest ratings? Which wines were rated worst/best on average?
+
+First, explore the data:
+
+```{r}
+data("Wines2012")
+w = Wines2012
+
+names(w)
+
+table(w$judge, w$wine)
+
+table(w$flight)
+
+table(w$wine.amer)
+table(w$judge.amer)
+
+hist(w$score)
+
+# Standardize score 
+w$scorestd = (w$score - mean(w$score))/sd(w$score)
+hist(w$scorestd)
+
+# Make indices
+w$judgeind = as.integer(w$judge)
+w$wineind = as.integer(w$wine)
+
+# Check that they worked out as expected
+table(w$judge, w$judgeind)
+table(w$wine, w$wineind)
+
+wslim = w %>% select(scorestd, judgeind, wineind)
+```
+
+Now try some priors:
+
+```{r}
+mod1 = ulam(alist(
+  score.std ~ dnorm(mu, sigma),
+            mu <- jB[judge.ind] + wB[wine.ind],
+            jB ~ dnorm(0, 1),
+            wB ~ dnorm(0, 1),
+            sigma ~ dexp(1)),
+            data = wslim,
+            chains = 4
+            )
+```
+
+
+## Q2. 
+Now consider three features of the wines and judges:
+(1) flight: Whether the wine is red or white.
+(2) wine.amer: Indicator variable for American wines. 
+(3) judge.amer: Indicator variable for American judges.
+Use indicator or index variables to model the influence of these features on the scores. Omit the individual judge and wine index variables from Problem 1. Do not include interaction effects yet. Again use ulam, justify your priors, and be sure to check the chains. What do you conclude about the differences among the wines and judges? Try to relate the results to the inferences in Problem 1.
+
+
+
+## Q3. 
+Now consider two-way interactions among the three features. You should end up with three different interaction terms in your model. These will be easier to build, if you use indicator variables. Again use ulam, justify your priors, and be sure to check the chains. Explain what each interaction means. Be sure to interpret the model’s predictions on the outcome scale (mu, the expected score), not on the scale of individual parameters. You can use link to help with this, or just use your knowledge of the linear model instead.
+What do you conclude about the features and the scores? Can you relate the results of your model(s) to the individual judge and wine inferences from Problem 1?
