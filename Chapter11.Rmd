@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(rethinking)
 library(tidyverse)
 library(tidybayes)
+library(cowplot)
 ```
 
 
@@ -53,30 +54,108 @@ I want you to consider a similar question: What are the total and indirect causa
 Gender -> Award success
 Gender -> Discipline -> Award success
 
-```{r}
+Prepare data:
+```{r, cache = TRUE}
 data("NWOGrants")
 d = NWOGrants
 
-summary(d)
-
 dat = compose_data(d)
+# 1 = female, 2 = male
 dat
+```
 
-m11.6 = ulam(
+First with gender only:
+```{r, cache = TRUE}
+m11.1 = ulam(
   alist(
-    left_pulls ~ dbinom(18, p),
-    logit(p) <- a[actor] + b[treatment],
-    a[actor] ~ dnorm(0, 1.5),
-    b[treatment] ~ dnorm(0, 0.5)
+    awards ~ dbinom(applications, p),
+    logit(p) <- a[gender],
+    a[gender] ~ dnorm(0, 1.5)
   ), data = dat, chains = 4, log_lik = TRUE
   )
 
-precis(m11.6, depth = 2)
+precis(m11.1, depth = 2)
+plot(precis(m11.1, depth = 2))
+
+```
+
+Women tend to have slightly lower probabilites of being funded.
+
+```{r, cache = TRUE}
+post = extract.samples(m11.1)
+p_award = as.data.frame(inv_logit(post$a))
+ggplot(p_award) +
+  geom_density(aes(x = V1), alpha = 0.5, color = "black") +
+  geom_density(aes(x = V2), alpha = 0.5, color = "blue") +
+  xlim(0,1)
 ```
 
 
+Visualise funding rate differences for men and women by discipline.
+```{r, cache = TRUE}
+ggplot(d) +
+  geom_point(aes(y = awards/applications, x = as.numeric(gender), color = discipline)) +
+  geom_line(aes(y = awards/applications, x = as.numeric(gender), color = discipline)) +
+  scale_x_continuous(breaks = c(1, 2), labels = c("f", "m")) +
+  labs(x = "Gender", color = "Discipline", y = "Proportion funded")
+
+```
+
+Women appear especially less likely to be funded than men in Earth/life sciences, Medical sciences, sSocial sciences, and Physics. 
+
+Visualise counts of funding applications and awards for men and women by discipline.
+```{r, cache = TRUE}
+a = ggplot(d) +
+  geom_point(aes(y = applications, x = as.numeric(gender), color = discipline)) +
+  geom_line(aes(y = applications, x = as.numeric(gender), color = discipline)) +
+  scale_x_continuous(breaks = c(1, 2), labels = c("f", "m")) +
+  labs(x = "Gender", color = "Discipline", y = "Number of applications")
+
+
+b = ggplot(d) +
+  geom_point(aes(y = awards, x = as.numeric(gender), color = discipline)) +
+  geom_line(aes(y = awards, x = as.numeric(gender), color = discipline)) +
+  scale_x_continuous(breaks = c(1, 2), labels = c("f", "m")) +
+  labs(x = "Gender", color = "Discipline", y = "Number of awards")
+
+plot_grid(a,b)
+
+```
+In two fields where the most awards are made (Social and Medical), women are less likelty to recieve awards, even though they are submitting similar numbers of applications.
+
+Now with gender and discipline:
+```{r, cache = TRUE}
+m11.2 = ulam(
+  alist(
+    awards ~ dbinom(applications, p),
+    logit(p) <- a[gender] + b[discipline],
+    a[gender] ~ dnorm(0, 1.5),
+    b[discipline] ~ dnorm(0, 1.5)
+  ), data = dat, chains = 4, log_lik = TRUE
+  )
+
+precis(m11.2, depth = 2)
+plot(precis(m11.2, depth = 2))
+```
+This model indicates that men and women are funded at similar rates, but there is also variation in the rates at which different disciplines are funded. 
+
+1 = Chemical sciences 
+2 = Earth/life sciences 
+3 = Humanities 
+4 = Interdisciplinary 
+5 = Medical sciences 
+6 = Physical sciences 
+7 = Physics 
+8 = Social sciences 
+9 = Technical sciences
+
+Social sciences has lower success rates per application, while physics has higher success rates per application. 
+
+One of the raw data plots made me think that there was an interaction between gender and discipline, but I'm not sure we have the power to look at that, since we have just one observation per combination. 
+
 What is your causal interpretation? If NWO’s goal is to equalize rates of funding between the genders, what type of intervention would be most effective?
 
+They could increase funding rates for disciplines where women are more likely to get awards. They could encourage women to enter fields where they are more likely to be funded, they could implement practices to reduce bias in fields where women are less than men. 
 
 
 
@@ -87,4 +166,4 @@ Suppose that the NWO Grants sample has an unobserved confound that influences bo
 
 Add these influences to your DAG from Problem 1. What happens now when you condition on discipline? Does it provide an un-confounded estimate of the direct path from gender to an award? Why or why not? Justify your answer with the back-door criterion. Hint: this is structurally a lot like the grandparents-parents- children-neighborhoods example from a previous week.
 
-If you have trouble thinking this though, try simulating fake data, assuming your DAG is true. Then analyze it using the model from Problem 1. What do you con- clude? Is it possible for gender to have a real direct causal influence but for a regression conditioning on both gender and discipline to suggest zero influence?
+If you have trouble thinking this though, try simulating fake data, assuming your DAG is true. Then analyze it using the model from Problem 1. What do you conclude? Is it possible for gender to have a real direct causal influence but for a regression conditioning on both gender and discipline to suggest zero influence?
