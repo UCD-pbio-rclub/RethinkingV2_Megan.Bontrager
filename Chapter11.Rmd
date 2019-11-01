@@ -153,6 +153,30 @@ Social sciences has lower success rates per application, while physics has highe
 
 One of the raw data plots made me think that there was an interaction between gender and discipline, but I'm not sure we have the power to look at that, since we have just one observation per combination. 
 
+```{r, cache = TRUE}
+d2 = d %>% select(-applications) %>% spread(gender, awards) %>% 
+  rename(f_awards = f, m_awards = m)
+d3 = d %>% select(-awards) %>% spread(gender, applications) %>% 
+  rename(f_apps = f, m_apps = m)
+
+d4 = left_join(d2, d3) %>% 
+  mutate(f_m_app_ratio = f_apps/m_apps,
+         f_m_award_ratio = f_awards/m_awards,
+         num_awards = f_awards +m_awards) %>% 
+  select(discipline, f_m_app_ratio, f_m_award_ratio, num_awards) %>% 
+  gather(key = type, value = ratio, f_m_app_ratio, f_m_award_ratio, -discipline, -num_awards)
+
+ggplot(d4) +
+  geom_point(aes(y = ratio, x = as.numeric(as.factor(type)), color = discipline, size = num_awards)) +
+  geom_line(aes(y = ratio, x = as.numeric(as.factor(type)), color = discipline)) +
+  scale_x_continuous(breaks = c(1, 2), labels = c("Application", "Award")) +
+  labs(x = "Stage", color = "Discipline", y = "Gender ratio (F:M)")
+
+
+```
+
+
+
 What is your causal interpretation? If NWO’s goal is to equalize rates of funding between the genders, what type of intervention would be most effective?
 
 They could increase funding rates for disciplines where women are more likely to get awards. They could encourage women to enter fields where they are more likely to be funded, they could implement practices to reduce bias in fields where women are less than men. 
