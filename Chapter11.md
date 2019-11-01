@@ -7,28 +7,33 @@ output:
     keep_md: yes
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-library(rethinking)
-library(tidyverse)
-library(tidybayes)
-```
+
 
 
 ### 10E1
 
 If an event has a probability 0.35, what are the log-odds of the event?
 
-```{r}
+
+```r
 logit(0.35)
+```
+
+```
+## [1] -0.6190392
 ```
 
 ### 10E2
 
 If an event has log-odds 3.2, what is the probability of the event?
 
-```{r}
+
+```r
 inv_logit(3.2)
+```
+
+```
+## [1] 0.9608343
 ```
 
 ### 10E3
@@ -51,33 +56,30 @@ The data in data(NWOGrants) are outcomes for scientific funding applications for
 I want you to consider a similar question: What are the total and indirect causal effects of gender on grant awards? Consider a mediation path (a pipe) through discipline. Draw the corresponding DAG and then use one or more binomial GLMs to answer the question.
 
 Gender -> Award success
-Gender -> Discipline -> Award success
-
-```{r}
-data("NWOGrants")
-d = NWOGrants
-
-summary(d)
-
-dat = compose_data(d)
-dat
-
-m11.6 = ulam(
-  alist(
-    left_pulls ~ dbinom(18, p),
-    logit(p) <- a[actor] + b[treatment],
-    a[actor] ~ dnorm(0, 1.5),
-    b[treatment] ~ dnorm(0, 0.5)
-  ), data = dat, chains = 4, log_lik = TRUE
-  )
-
-precis(m11.6, depth = 2)
-```
-
+    \       ^
+     v     /
+    Discipline
 
 What is your causal interpretation? If NWO’s goal is to equalize rates of funding between the genders, what type of intervention would be most effective?
 
 
+```r
+data("NWOGrants")
+d = NWOGrants
+
+summary(d)
+```
+
+```
+##                discipline gender  applications        awards     
+##  Chemical sciences  :2    f:9    Min.   :  9.00   Min.   : 2.00  
+##  Earth/life sciences:2    m:9    1st Qu.: 69.75   1st Qu.:14.00  
+##  Humanities         :2           Median :130.50   Median :24.00  
+##  Interdisciplinary  :2           Mean   :156.83   Mean   :25.94  
+##  Medical sciences   :2           3rd Qu.:219.75   3rd Qu.:32.75  
+##  Physical sciences  :2           Max.   :425.00   Max.   :65.00  
+##  (Other)            :6
+```
 
 
 
