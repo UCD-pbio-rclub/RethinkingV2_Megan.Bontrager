@@ -41,7 +41,7 @@ This indicates that for a unit increase in that coefficient, there is a 1.7x pro
 
 As explained in the chapter, binomial data can be organized in aggregated and disaggregated forms, without any impact on inference. But the likelihood of the data does change when the data are converted between the two formats. Can you explain why?
 
-When each trial is considered a replicate, rather than groups of trials, there are more possible ways to see the data. As a result, 
+When each trial is considered a replicate, rather than groups of trials, there are more possible ways to see the data. As a result, the deviance is higher and the loo/waic scores are lower. 
 
 
 ### Week 6 HW 1
