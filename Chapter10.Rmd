@@ -98,9 +98,9 @@ wslim2 = w %>% select(scorestd, wineamer = wine.amer, judgeamer = judge.amer, fl
 mod2  = ulam(alist(
   scorestd ~ dnorm(mu, sigma),
             mu <- jB[judgeamer] + wB[wineamer] + fB[flight],
-            jB[judgeamer] ~ dnorm(0, 1),
-            wB[wineamer] ~ dnorm(0, 1),
-            fB[flight] ~ dnorm(0, 1),
+            jB[judgeamer] ~ dnorm(0, 0.25),
+            wB[wineamer] ~ dnorm(0, 0.25),
+            fB[flight] ~ dnorm(0, 0.25),
             sigma ~ dexp(1)),
             data = wslim2,
             chains = 4, cores = 2, iter = 2e3
@@ -116,6 +116,10 @@ precis(mod2, depth = 2)
 
 plot(precis(mod2, depth = 2))
 
+check = extract.samples(mod2, n = 1000)
+
+hist(check$jB[,1] - check$jB[,2])
+
 ```
 
 There aren't strong effects of wine origin or judge origin. French judges (category 1) tended to rate wines lower, and American wines (category 2) tended to be rated lower, but there is a ton of varation around these estimates. Red and white wines were equally favored.
@@ -127,10 +131,14 @@ What do you conclude about the features and the scores? Can you relate the resul
 
 ```{r, cache = TRUE}
 
+wslim3 = w %>% select(scorestd, wineamer = wine.amer, judgeamer = judge.amer, flight) %>% 
+  mutate(wineamer = wineamer, judgeamer = judgeamer, flight = as.integer(flight) - 1)
+
 mod3  = ulam(alist(
   scorestd ~ dnorm(mu, sigma),
-            mu <- jB*judgeamer + wB*wineamer + fB*flight +
+            mu <- a + jB*judgeamer + wB*wineamer + fB*flight +
                   jwB*judgeamer*wineamer + jfB*judgeamer*flight + fwB*wineamer*flight,
+            a ~ dnorm(0, 1),
             jB ~ dnorm(0, 1),
             wB ~ dnorm(0, 1),
             fB ~ dnorm(0, 1),
@@ -138,7 +146,7 @@ mod3  = ulam(alist(
             jfB ~ dnorm(0, 0.5),
             fwB ~ dnorm(0, 0.5),
             sigma ~ dexp(1)),
-            data = wslim2,
+            data = wslim3,
             chains = 4, cores = 2, iter = 2e3
             )
 
