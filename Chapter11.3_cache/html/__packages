@@ -1,0 +1,17 @@
+base
+MASS
+StanHeaders
+ggplot2
+rstan
+dagitty
+rethinking
+tidyverse
+tibble
+tidyr
+readr
+purrr
+dplyr
+stringr
+forcats
+tidybayes
+magrittr
