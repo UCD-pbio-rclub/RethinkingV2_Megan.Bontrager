@@ -1,0 +1,224 @@
+---
+title: "Chapter11.2"
+author: "Megan Bontrager"
+date: "11/8/2019"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(rethinking)
+library(tidyverse)
+
+```
+
+## 10E4
+Why do Poisson regressions sometimes require the use of an offset? Provide an example.
+
+An offset accounts for difference in the time or space during which an event might have occurred (i.e., the amount of time or space over which a rate could be estimated). Offsets could be used, for example, to account for different observation window lengths if you were counting pollinator visits. 
+
+
+## 10M2
+
+If a coefficient in a Poisson regression has value 1.7, what does this imply about the change in the outcome?
+
+This means that for one unit of change in the predictor, there is a exp(1.7*x) change in the lambda of the Poisson distribution.
+
+## 10M3
+
+Explain why the log link is appropriate for a Poisson generalized linear model.
+
+Responses in a Poisson GLM are positive - the underlying data is typically a count. The log transforms a linear predictor, which could be positive or negative, to a positive scale, because negative values on the linear scale will be between 0 and 1 on the log scale.
+
+## 10M4
+
+What would it imply to use a logit link for the mean of a Poisson generalized linear model? Can you think of a real research problem for which this would make sense?
+
+
+
+##10H4
+
+The data contained in data(salamanders) are counts of salamanders (Plethodonelongatus) from 47 different 49-m2 plots in northern California. The column SALAMAN is the count in each plot, and the columns PCTCOVER and FORESTAGE are percent of ground cover and age of trees in the plot, respectively. You will model SALAMAN as a Poisson variable.
+
+(a) Model the relationship between density and percent cover, using a log-link (same as the example in the book and lecture). Use weakly informative priors of your choosing. Check the quadratic approximation again, by comparing quap to ulam. Then plot the expected counts and their 89% interval against percent cover. In which ways does the model do a good job? In which ways does it do a bad job?
+
+```{r, height = 3, width = 3, cache = TRUE}
+data(salamanders)
+
+# Explore the data
+
+pairs(salamanders[,2:4])
+
+# Percent cover and forest age are kind of related; only very young forests have low percent cover.
+
+# Drop first column for a slim dataframe
+sal_slim = data.frame(sal = salamanders$SALAMAN, pct = scale(salamanders$PCTCOVER), age = scale(salamanders$FORESTAGE))
+
+hist(sal_slim$pct)
+
+# Simulate some priors; starting with his from the book
+
+curve(dlnorm(x , 2, 0.5), from = 0, to = 100, n = 200)
+
+set.seed(10)
+N <- 100
+a <- rnorm( N , 2 , 0.5 )
+b <- rnorm( N , 0 , 0.2 )
+plot( NULL , xlim=c(-2,2) , ylim=c(0,40) )
+for ( i in 1:N ) curve( exp( a[i] + b[i]*x ) , add=TRUE , col=col.alpha("black",0.5) )
+
+# Not too wild; shifted mean a bit lower for intercept because I noticed many small numbers in the response. 
+
+
+m1 = ulam(
+  alist(
+    sal ~ dpois(lambda),
+    log(lambda) <- a + Bpct*pct,
+    a ~ dnorm(3, 0.5),
+    Bpct ~ dnorm(0, 0.2)
+  ),
+  data = sal_slim, chains = 4, iter = 2000, log_lik = TRUE)
+
+precis(m1)
+
+m1_lambda = link(m1, data = data.frame(pct = seq(-2.5, 1.5, length.out = 100)))
+m1_mu = data.frame(mu = apply(m1_lambda, 2, mean))
+m1_ci = data.frame(t(apply(m1_lambda, 2, PI)))
+colnames(m1_ci) = c("cilow", "cihigh")
+
+preds = data.frame(pct = seq(-2, 1, length.out = 100), mu = m1_mu$mu, low = m1_ci$cilow, high = m1_ci$cihigh)
+
+# Add in un-scaling pct if time
+
+ggplot() +
+  geom_point(data = sal_slim, aes(x = pct, y = sal)) +
+  geom_line(data = preds, aes(x = pct, y = mu)) +
+  geom_ribbon(data = preds, aes(x = pct, ymin = low, ymax = high), alpha = 0.3)
+
+```
+
+The model does a decent job predicting the mean, but there is a lot of variation at the high end of the predictor.
+
+(b) Can you improve the model by using the other predictor, FORESTAGE? Try any models you think useful. Can you explain why FORESTAGE helps or does not help with prediction?
+
+I don't think forest age will be useful since it seems kind of confounded with percent cover. 
+
+```{r, height = 3, width = 3, cache = TRUE}
+
+plot(sal_slim$age, sal_slim$pct)
+
+plot(log(salamanders$FORESTAGE), salamanders$PCTCOVER)
+
+
+# Model with age and pct cover
+m2 = ulam(
+  alist(
+    sal ~ dpois(lambda),
+    log(lambda) <- a + Bpct*pct + Bage*age,
+    a ~ dnorm(3, 0.5),
+    Bpct ~ dnorm(0, 0.2),
+    Bage ~ dnorm(0, 0.2)
+  ),
+  data = sal_slim, chains = 4, iter = 2000, log_lik = TRUE)
+
+precis(m2)
+
+# Pct cover doesn't seem to add information.
+
+# Model with age only
+m3 = ulam(
+  alist(
+    sal ~ dpois(lambda),
+    log(lambda) <- a + Bage*age,
+    a ~ dnorm(3, 0.5),
+    Bage ~ dnorm(0, 0.2)
+  ),
+  data = sal_slim, chains = 4, iter = 2000, log_lik = TRUE)
+
+precis(m3)
+
+compare(m1, m2, m3)
+
+
+m3_lambda = link(m3, data = data.frame(age = seq(-2, 1, length.out = 100)))
+m3_mu = data.frame(mu = apply(m3_lambda, 2, mean))
+m3_ci = data.frame(t(apply(m3_lambda, 2, PI)))
+colnames(m3_ci) = c("cilow", "cihigh")
+
+preds = data.frame(age = seq(-1, 3, length.out = 100), mu = m3_mu$mu, low = m3_ci$cilow, high = m3_ci$cihigh)
+
+# Add in un-scaling pct if time
+
+ggplot() +
+  geom_point(data = sal_slim, aes(x = age, y = sal)) +
+  geom_line(data = preds, aes(x = age, y = mu)) +
+  geom_ribbon(data = preds, aes(x = age, ymin = low, ymax = high), alpha = 0.3)
+
+```
+
+
+## Week 6 HW 3
+
+3. The data in data(Primates301) were first introduced at the end of Chapter 7. In this problem, you will consider how brain size is associated with social learning. There are three parts.
+
+First, model the number of observations of social_learning for each species as a function of the log brain size. Use a Poisson distribution for the social_learning outcome variable. Interpret the resulting posterior.
+
+```{r, cache = TRUE }
+
+data("Primates301")
+
+Primates301 = Primates301 %>% select(brain, social_learning, research_effort)
+
+summary(Primates301)
+pairs(Primates301)
+
+
+d = Primates301 %>% select(social_learning, brain, research_effort) %>% mutate(log_brain = log(brain), log_re = log(research_effort)) %>% filter(!is.na(log_brain), !is.na(social_learning), !is.na(research_effort))
+
+m4 = ulam(
+  alist(
+    social_learning ~ dpois(lambda),
+    log(lambda) <- a + Bbrain*log_brain,
+    a ~ dnorm(3, 0.5),
+    Bbrain ~ dnorm(0, 0.2)
+  ),
+  data = d, chains = 4, iter = 2000, log_lik = TRUE)
+
+precis(m4)
+plot(precis(m4))
+
+```
+
+There is a positive realtionship between log brain size and social learning.
+
+Second, some species are studied much more than others. So the number of reported instances of social_learning could be a product of research effort. Use the research_effort variable, specifically its logarithm, as an additional predictor variable. Interpret the coefficient for log research_effort. Does this model disagree with the previous one?
+
+```{r, cache = TRUE }
+
+m5 = ulam(
+  alist(
+    social_learning ~ dpois(lambda),
+    log(lambda) <- a + Bbrain*log_brain + Bre*log_re,
+    a ~ dnorm(3, 0.5),
+    Bbrain ~ dnorm(0, 0.2),
+    Bre ~ dnorm(0, 0.2)
+  ),
+  data = d, chains = 4, iter = 2000, log_lik = TRUE)
+
+precis(m5)
+
+plot(precis(m5))
+
+
+```
+Some of the apparent effects of brain size might be due to research effort. 
+
+
+Third, draw a DAG to represent how you think the variables social_learning, brain, and research_effort interact. Justify the DAG with the measured associations in the two models above (and any other models you used).
+
+I think there might be an effect of brain size on social learning, but also a backdoor through research effort. Larger brain species might be studied more, and we might know more about their capacities to learn. 
+
+
