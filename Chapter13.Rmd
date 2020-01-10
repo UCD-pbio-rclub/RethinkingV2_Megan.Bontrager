@@ -1,0 +1,166 @@
+---
+title: "Chapter13"
+author: "Megan Bontrager"
+date: "1/10/2020"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Book practice
+
+```{r, cache = TRUE, message = FALSE}
+library(rethinking)
+data(reedfrogs)
+d = reedfrogs
+str(d)
+
+d$tank = 1:nrow(d)
+dat = list(s = d$surv, n = d$density, tank = d$tank)
+```
+
+```{r, cache = TRUE, message = FALSE, results=FALSE}
+m13.1 = ulam(
+  alist(
+    s ~ dbinom(n, p),
+    logit(p) <- a[tank],
+    a[tank] ~ dnorm(0, 1.5)),
+  data = dat, chains = 4, log_lik = TRUE
+  )
+
+m13.2 = ulam(
+  alist(
+    s ~ dbinom(n, p),
+    logit(p) <- a[tank],
+    a[tank] ~ dnorm(a_bar, sigma),
+    a_bar ~ dnorm(0, 1.5),
+    sigma ~ dexp(1)),
+  data = dat, chains = 4, log_lik = TRUE
+  )
+```
+
+```{r, cache = TRUE, message = FALSE}
+
+precis(m13.1, depth = 2)
+precis(m13.2, depth = 2)
+
+compare(m13.1, m13.2)
+
+post = extract.samples(m13.2)
+d$propsurv.est = logistic(apply(post$a, 2, mean))
+plot(d$propsurv, ylim = c(0, 1), pch = 16, xaxt = "n", xlab = "tank", ylab = "Proportion survival", col = rangi2)
+axis(1, at = c(1, 16, 32, 48, labels = c(1, 16, 32, 48)))
+points(d$propsurv.est)
+abline(h=mean(inv_logit(post$a_bar)), lty = 2)
+
+```
+
+
+
+## 12E1
+
+Normal(0, 1) will result in more shrinkage, since the smaller standard deviation will produce estimates closer to the mean of 0.
+
+
+## 12E2
+
+```{r, eval = FALSE}
+m = ulam(
+  alist(
+    y ~ dbinom(1, p),
+    logit(p) <- a[group] + b*x,
+    a[group] ~ dnorm(0, 10),
+    b ~ ndnorm(0, 1))
+  )
+```
+
+## 12E3
+
+```{r, eval = FALSE}
+m = ulam(
+  alist(
+    y ~ dnorm(mu, sigma),
+    mu <- a[group] + b*x,
+    a[group] ~ dnorm(0, 10),
+    b ~ ndnorm(0, 1),
+    sigma ~ dcauchy(0, 2)),
+  )
+```
+
+## 12M1
+
+```{r, cache = TRUE}
+
+library(rethinking)
+data(reedfrogs)
+d = reedfrogs
+
+dat = list(s = d$surv, n = d$density, tank = d$tank, sze = as.integer(d$size))
+
+m13M1.1 = ulam(
+  alist(
+    s ~ dbinom(n, p),
+    logit(p) <- a[tank] + Bsize[sze],
+    a[tank] ~ dnorm(a_bar, sigma),
+    a_bar ~ dnorm(0, 1.5),
+    Bsize[sze] ~ dnorm(0, 1.5),
+    sigma ~ dexp(1)),
+  data = dat, chains = 4, log_lik = TRUE, iter = 4e3
+  )
+precis(m13M1.1, depth = 2)
+
+dat = list(s = d$surv, n = d$density, tank = d$tank, sze = as.integer(d$size), pred = as.integer(d$pred))
+
+m13M1.2 = ulam(
+  alist(
+    s ~ dbinom(n, p),
+    logit(p) <- a[tank] + Bsize[sze] + Bpred[pred],
+    a[tank] ~ dnorm(a_bar, sigma),
+    a_bar ~ dnorm(0, 1.5),
+    Bsize[sze] ~ dnorm(0, 1.5),
+    Bpred[pred] ~ dnorm(0, 1.5),
+    sigma ~ dexp(1)),
+  data = dat, chains = 4, log_lik = TRUE, iter = 4e3
+  )
+
+dat = list(s = d$surv, n = d$density, tank = d$tank, pred = as.integer(d$pred))
+
+m13M1.3 = ulam(
+  alist(
+    s ~ dbinom(n, p),
+    logit(p) <- a[tank] + Bpred[pred],
+    a[tank] ~ dnorm(a_bar, sigma),
+    a_bar ~ dnorm(0, 1.5),
+    Bpred[pred] ~ dnorm(0, 1.5),
+    sigma ~ dexp(1)),
+  data = dat, chains = 4, log_lik = TRUE, iter = 4e3
+  )
+
+# Still stuck on fitting interactions
+# m13M1.4 = ulam(
+#   alist(
+#     s ~ dbinom(n, p),
+#     logit(p) <- a[tank],
+#     a[tank] ~ dnorm(a_bar, sigma),
+#     a_bar ~ dnorm(0, 1.5),
+#     sigma ~ dexp(1)),
+#   data = dat, chains = 4, log_lik = TRUE
+#   )
+```
+
+## 12M2
+
+```{r}
+
+```
+
+## 12H1
+
+```{r}
+
+```
+
