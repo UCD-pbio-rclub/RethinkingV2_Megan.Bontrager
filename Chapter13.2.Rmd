@@ -14,8 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ## 12M4
 
 
-
-```{r, warning=FALSE, echo=FALSE}
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
 
 library(rethinking)
 library(tidyverse)
@@ -41,7 +40,6 @@ First fit model from chapter:
 
 ```{r, message = FALSE, warning = FALSE, cache = TRUE}
 
-
 m13.4 <- ulam(
   alist(
     pulled_left ~ dbinom(1, p),
@@ -55,19 +53,16 @@ m13.4 <- ulam(
   data = d_list, cores = 2, log_lik = TRUE
   )
 
-
 ```
-
 
 Now fit new model:
 
-Is C supposed to be condition or chose_prosocial?
 
 ```{r, message = FALSE, warning = FALSE, cache = TRUE}
 
 d_list_new = list(actor = d$actor,
               block_id = as.integer(d$block),
-              chose_prosoc = d$chose_prosoc,
+              condition = d$condition,
               prosoc_left = d$prosoc_left,
               pulled_left = d$pulled_left
               )
@@ -75,12 +70,11 @@ d_list_new = list(actor = d$actor,
 m13.new <- ulam(
   alist(
     pulled_left ~ dbinom(1, p),
-    logit(p) <- a[actor] + g[block_id] + (b_p + b_pc*chose_prosoc)*prosoc_left, 
+    logit(p) <- a[actor] + g[block_id] + (b_p + b_pc*condition)*prosoc_left, 
     b[treatment] ~ dnorm(0, 0.5),
     a[actor] ~ dnorm(a_bar, sigma_a),
-    g[block_id] ~ dnorm(g_bar, sigma_g),
+    g[block_id] ~ dnorm(0, sigma_g),
     a_bar ~ dnorm(0, 10),
-    g_bar ~ dnorm(0, 10),
     b_p ~ dnorm(0, 10),
     b_pc ~ dnorm(0, 10),
     sigma_a ~ cauchy(0, 1),
@@ -95,6 +89,7 @@ Compare estimates.
 ```{r}
 
 coeftab(m13.4, m13.new)
+precis(m13.new, depth = 2)
 
 ```
 
@@ -104,8 +99,7 @@ coeftab(m13.4, m13.new)
 
 Model with no varying effects:
 
-
-```{r, cache = TRUE}
+```{r, cache = TRUE, eval = FALSE}
 data("Trolley")
 d = Trolley
 
@@ -133,7 +127,7 @@ t_mod1 = ulam(
 
 Model with varying effect of id only.
 
-```{r, cache = TRUE}
+```{r, cache = TRUE, eval = FALSE}
 
 d_list2 = list(contact = d$contact,
               id = as.integer(d$id),
@@ -160,7 +154,7 @@ t_mod2 = ulam(
 
 Model with varying effect of id and story.
 
-```{r, cache = TRUE}
+```{r, cache = TRUE, eval = FALSE}
 data("Trolley")
 d = Trolley
 
