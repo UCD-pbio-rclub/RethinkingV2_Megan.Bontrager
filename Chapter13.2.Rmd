@@ -1,0 +1,190 @@
+---
+title: "Chapter13.2"
+author: "Megan Bontrager"
+date: "1/24/2020"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 12M4
+
+
+
+```{r, warning=FALSE, echo=FALSE}
+
+library(rethinking)
+library(tidyverse)
+library(tidybayes)
+
+```
+
+```{r, warning=FALSE, cache = TRUE}
+
+data(chimpanzees)
+d = chimpanzees %>% 
+  mutate(treatment = 1 + prosoc_left + 2*condition)
+
+d_list = list(actor = d$actor,
+              block_id = as.integer(d$block),
+              treatment = as.integer(d$treatment),
+              pulled_left = d$pulled_left
+              )
+```
+
+
+First fit model from chapter:
+
+```{r, message = FALSE, warning = FALSE, cache = TRUE}
+
+
+m13.4 <- ulam(
+  alist(
+    pulled_left ~ dbinom(1, p),
+    logit(p) <- a[actor] + g[block_id] + b[treatment], 
+    b[treatment] ~ dnorm(0, 0.5),
+    a[actor] ~ dnorm(a_bar, sigma_a),
+    g[block_id] ~ dnorm(0, sigma_g),
+    a_bar ~ dnorm(0, 1.5),
+    sigma_a ~ dexp(1),
+    sigma_g ~ dexp(1)),
+  data = d_list, cores = 2, log_lik = TRUE
+  )
+
+
+```
+
+
+Now fit new model:
+
+Is C supposed to be condition or chose_prosocial?
+
+```{r, message = FALSE, warning = FALSE, cache = TRUE}
+
+d_list_new = list(actor = d$actor,
+              block_id = as.integer(d$block),
+              chose_prosoc = d$chose_prosoc,
+              prosoc_left = d$prosoc_left,
+              pulled_left = d$pulled_left
+              )
+
+m13.new <- ulam(
+  alist(
+    pulled_left ~ dbinom(1, p),
+    logit(p) <- a[actor] + g[block_id] + (b_p + b_pc*chose_prosoc)*prosoc_left, 
+    b[treatment] ~ dnorm(0, 0.5),
+    a[actor] ~ dnorm(a_bar, sigma_a),
+    g[block_id] ~ dnorm(g_bar, sigma_g),
+    a_bar ~ dnorm(0, 10),
+    g_bar ~ dnorm(0, 10),
+    b_p ~ dnorm(0, 10),
+    b_pc ~ dnorm(0, 10),
+    sigma_a ~ cauchy(0, 1),
+    sigma_g ~ cauchy(0, 1)),
+  data = d_list_new, cores = 2, log_lik = TRUE
+  )
+
+```
+
+Compare estimates.
+
+```{r}
+
+coeftab(m13.4, m13.new)
+
+```
+
+
+
+## 12H3
+
+Model with no varying effects:
+
+
+```{r, cache = TRUE}
+data("Trolley")
+d = Trolley
+
+d_list1 = list(contact = d$contact,
+              id = as.integer(d$id),
+              action = d$action,
+              intention = d$intention,
+              story = as.integer(d$story),
+              response = d$response
+              )
+
+t_mod1 = ulam(
+  alist(
+    response ~ ordered_logistic(phi, kappa),
+    phi <-  bA*action + bI*intention + bC*contact,
+    kappa ~ dnorm(0, 1.5),
+    c(bA, bI, bC) ~ dnorm(0,1),
+    a ~ dnorm(0, 1)
+  ),
+  data = d_list1, cores = 2, log_lik = TRUE
+)
+
+```
+
+
+Model with varying effect of id only.
+
+```{r, cache = TRUE}
+
+d_list2 = list(contact = d$contact,
+              id = as.integer(d$id),
+              action = d$action,
+              intention = d$intention,
+              response = d$response
+              )
+
+t_mod2 = ulam(
+  alist(
+    response ~ ordered_logistic(phi, kappa),
+    phi <- aI[id] + bA*action + bI*intention + bC*contact,
+    kappa ~ dnorm(0, 1.5),
+    c(bA, bI, bC) ~ dnorm(0,1),
+    aI[id] ~ dnorm(a, sigma_i), 
+    a ~ dnorm(0, 1),
+    sigma_i ~ dexp(1)
+  ),
+  data = d_list2, cores = 2, log_lik = TRUE
+)
+
+```
+
+
+Model with varying effect of id and story.
+
+```{r, cache = TRUE}
+data("Trolley")
+d = Trolley
+
+d_list3 = list(contact = d$contact,
+              id = as.integer(d$id),
+              action = d$action,
+              intention = d$intention,
+              story = as.integer(d$story),
+              response = d$response
+              )
+
+t_mod3 = ulam(
+  alist(
+    response ~ ordered_logistic(phi, kappa),
+    phi <- aI[id] + aS[story] + bA*action + bI*intention + bC*contact,
+    kappa ~ dnorm(0, 1.5),
+    c(bA, bI, bC) ~ dnorm(0,1),
+    aI[id] ~ dnorm(a, sigma_i), 
+    aS[story] ~ dnorm(0, sigma_s), 
+    a ~ dnorm(0, 1),
+    sigma_i ~ dexp(1),
+    sigma_s ~ dexp(1)
+  ),
+  data = d_list3, cores = 2, log_lik = TRUE
+)
+
+```
