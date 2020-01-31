@@ -1,0 +1,219 @@
+---
+title: "tomato_growth"
+author: "Megan Bontrager"
+date: "1/30/2020"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+library(tidyverse)
+library(rethinking)
+
+
+```
+
+This csv has measurements of tomato internodes and petioles from wildtype (Moneymaker) and various phytochrome mutant lines.  Measurements were made at 3 time points, 21, 28, and 35 days after germination under two treatments, simulated sun and simulated shade.
+
+For today let's focus on day 35.  Also let's focus on total stem length.
+
+## Q1)
+
+a) subset the data for day 35
+
+b) create a new column "stem_length" that is the sum of epi, int1, int2, and int3
+
+c) although flats are listed as 1-6, flats in sun and shade are separate. Create a new column "flat2" that corrects for this.
+
+```{r, cache = TRUE}
+
+library(tidyverse)
+library(rethinking)
+
+dat = read_csv("figure4phyE.csv") %>% 
+  filter(day == 35) %>% 
+  mutate(stem_length = epi + int1 + int2 + int3,
+         flat2 = paste(treatment, flat, sep = "_"))
+
+hist(dat$stem_length)
+
+ggplot(dat, aes(x = genotype, y = stem_length, color = treatment)) + 
+  geom_jitter(width = 0.2)
+
+ggplot(dat, aes(x = flat, y = stem_length, color = treatment)) + 
+  geom_jitter(width = 0.2)
+
+```
+
+
+Ultimately you want to know if any of the mutants have a different length from Moneymaker, in sun or in shade, or if the response to shade differs.
+
+## Q2) Fit 3 models, all of which include genotype and treatment
+
+a) do not include flat
+
+```{r, cache = TRUE}
+
+d1a = list(stem_length = dat$stem_length, 
+          treatment = as.integer(as.factor(dat$treatment)) - 1, # 0 = shade, 1 = sun
+          genotype = as.integer(as.factor(dat$genotype)))
+
+m1.1a = ulam(
+  alist(
+    stem_length ~ dnorm(mu, sigma),
+    mu <- aG[genotype] + treatment*bT + treatment*bGT[genotype],
+    aG[genotype] ~ dnorm(150, 25),
+    bT ~ dnorm(0, 10),
+    bGT[genotype] ~ dnorm(0, 10),
+    sigma ~ dexp(1)),
+  data = d1a, chains = 2, cores = 2, iter = 2000, log_lik = TRUE)
+
+precis(m1.1a, depth = 2)
+plot(precis(m1.1a, depth = 2))
+
+d1b = list(stem_length = dat$stem_length, 
+          treatment = as.integer(as.factor(dat$treatment)) - 1, # 0 = shade, 1 = sun
+          genotype = as.integer(as.factor(dat$genotype)))
+
+m1.1b = ulam(
+  alist(
+    stem_length ~ dnorm(mu, sigma),
+    mu <- aG[genotype] + treatment*bT,
+    aG[genotype] ~ dnorm(150, 25),
+    bT ~ dnorm(0, 10),
+    sigma ~ dexp(1)),
+  data = d1b, chains = 2, cores = 2, iter = 2000, log_lik = TRUE)
+
+precis(m1.1b, depth = 2)
+plot(precis(m1.1b, depth = 2))
+
+d1c = list(stem_length = dat$stem_length, 
+          treatment = as.integer(as.factor(dat$treatment)) - 1) # 0 = shade, 1 = sun
+
+m1.1c = ulam(
+  alist(
+    stem_length ~ dnorm(mu, sigma),
+    mu <- treatment*bT,
+    bT ~ dnorm(0, 10),
+    sigma ~ dexp(1)),
+  data = d1c, chains = 2, cores = 2, iter = 2000, log_lik = TRUE)
+
+precis(m1.1c, depth = 2)
+plot(precis(m1.1c, depth = 2))
+
+
+d1d = list(stem_length = dat$stem_length, 
+          genotype = as.integer(as.factor(dat$genotype)))
+
+m1.1d = ulam(
+  alist(
+    stem_length ~ dnorm(mu, sigma),
+    mu <- aG[genotype],
+    aG[genotype] ~ dnorm(150, 25),
+    sigma ~ dexp(1)),
+  data = d1d, chains = 2, cores = 2, iter = 2000, log_lik = TRUE)
+
+precis(m1.1d, depth = 2)
+plot(precis(m1.1d, depth = 2))
+
+compare(m1.1a, m1.1b, m1.1c, m1.1d)
+
+```
+
+All intercepts are positive and around 150-200, which is consistent with the data.
+The best model has treatment and genotype, but no interaction.
+
+
+b) include flat without pooling
+
+```{r, cache = TRUE}
+
+
+d2 = list(stem_length = dat$stem_length, 
+          treatment = as.integer(as.factor(dat$treatment)) - 1, # 0 = shade, 1 = sun
+          genotype = as.integer(as.factor(dat$genotype)),
+          flat = as.integer(as.factor(dat$flat2)))
+
+m1.2 = ulam(
+  alist(
+    stem_length ~ dnorm(mu, sigma),
+    mu <- aG[genotype] + treatment*bT + bF[flat],
+    aG[genotype] ~ dnorm(150, 25),
+    bT ~ dnorm(0, 10),
+    bF[flat] ~ dnorm(0, 10),
+    sigma ~ dexp(1)),
+  data = d2, chains = 2, cores = 2, iter = 2000, log_lik = TRUE)
+
+precis(m1.2, depth = 2)
+plot(precis(m1.2, depth = 2))
+```
+
+c) use a hierarchical model that allows partial pooling across flats
+
+```{r, cache = TRUE}
+
+m1.3 = ulam(
+  alist(
+    stem_length ~ dnorm(mu, sigma),
+    mu <- aG[genotype] + treatment*bT + bF[flat],
+    aG[genotype] ~ dnorm(150, 25),
+    bT ~ dnorm(0, 10),
+    bF[flat] ~ dnorm(0, f_sigma),
+    # f_bar ~ dnorm(0, 10),
+    f_sigma ~ dexp(1),
+    sigma ~ dexp(1)),
+  data = d2, chains = 2, cores = 2, iter = 2000, log_lik = TRUE)
+
+precis(m1.3, depth = 2)
+plot(precis(m1.3, depth = 2))
+
+```
+
+
+
+## Q3) Compare the models, which is preferred?
+
+```{r}
+
+compare(m1.1b, m1.2, m1.3)
+
+```
+
+The model without pooling but with flats is preferred. 
+
+## Q4) Using the hierarchical model, make posterior predictions
+a) for average cluster
+
+```{r}
+
+post = extract.samples(m1.3)
+
+
+avg_flat = rnorm(2000, 0, post$f_sigma)
+
+# Assume block effect is 0
+d_link1 = link(m1.3, replace = list(flat = 0))
+
+avg_flat = rnorm(2000, 0, post$f_sigma)
+
+# Assume block effect is 0
+d_link1 = link(m1.3, replace = list(flat = avg_flat))
+
+```
+
+
+b) for same clusters
+c) showing the "marginal" from cluster
+d) showing new clusters.
+
+## Q5) Reparameterize the model to help with divergent transitions (even if there aren't any)
+
+## Q6--optional)
+a) Which genotypes differ from MoneyMaker in Sun conditions?
+b) Which genotypes differ from MoneyMaker in Shade conditions?
+c) Which genotypes differ from MoneyMaker in their response to shade (difference in sun vs shade)?
+
