@@ -65,16 +65,17 @@ d1a = list(stem_length = dat$stem_length,
 m1.1a = ulam(
   alist(
     stem_length ~ dnorm(mu, sigma),
-    mu <- aG[genotype] + treatment*bT + treatment*bGT[genotype],
+    mu <- aG[genotype] + treatment*bGT[genotype],
     aG[genotype] ~ dnorm(150, 25),
-    bT ~ dnorm(0, 10),
     bGT[genotype] ~ dnorm(0, 10),
     sigma ~ dexp(1)),
   data = d1a, chains = 2, cores = 2, iter = 2000, log_lik = TRUE)
 
 precis(m1.1a, depth = 2)
 plot(precis(m1.1a, depth = 2))
+```
 
+```{r, cache = TRUE}
 d1b = list(stem_length = dat$stem_length, 
           treatment = as.integer(as.factor(dat$treatment)) - 1, # 0 = shade, 1 = sun
           genotype = as.integer(as.factor(dat$genotype)))
@@ -90,22 +91,26 @@ m1.1b = ulam(
 
 precis(m1.1b, depth = 2)
 plot(precis(m1.1b, depth = 2))
+```
 
+```{r, cache = TRUE}
 d1c = list(stem_length = dat$stem_length, 
           treatment = as.integer(as.factor(dat$treatment)) - 1) # 0 = shade, 1 = sun
 
 m1.1c = ulam(
   alist(
     stem_length ~ dnorm(mu, sigma),
-    mu <- treatment*bT,
+    mu <- a + treatment*bT,
+    a ~ dnorm(150, 25),
     bT ~ dnorm(0, 10),
     sigma ~ dexp(1)),
   data = d1c, chains = 2, cores = 2, iter = 2000, log_lik = TRUE)
 
 precis(m1.1c, depth = 2)
 plot(precis(m1.1c, depth = 2))
+```
 
-
+```{r, cache = TRUE}
 d1d = list(stem_length = dat$stem_length, 
           genotype = as.integer(as.factor(dat$genotype)))
 
@@ -190,8 +195,9 @@ a) for average cluster
 
 ```{r}
 
-post = extract.samples(m1.3)
+d_
 
+post = extract.samples(m1.3)
 
 avg_flat = rnorm(2000, 0, post$f_sigma)
 
@@ -211,6 +217,27 @@ c) showing the "marginal" from cluster
 d) showing new clusters.
 
 ## Q5) Reparameterize the model to help with divergent transitions (even if there aren't any)
+
+```{r, cache = TRUE}
+
+m1.3_re = ulam(
+  alist(
+    stem_length ~ dnorm(mu, sigma),
+    mu <- aG[genotype] + treatment*bT + bF[flat]*f_sigma,
+    aG[genotype] ~ dnorm(150, 25),
+    bT ~ dnorm(0, 10),
+    bF[flat] ~ dnorm(0, 10),
+    # f_bar ~ dnorm(0, 10),
+    f_sigma ~ dexp(1),
+    sigma ~ dexp(1)),
+  data = d2, chains = 2, cores = 2, iter = 2000, log_lik = TRUE)
+
+precis(m1.3_re, depth = 2)
+plot(precis(m1.3_re, depth = 2))
+
+precis(m1.3, m1.3_re)
+
+```
 
 ## Q6--optional)
 a) Which genotypes differ from MoneyMaker in Sun conditions?

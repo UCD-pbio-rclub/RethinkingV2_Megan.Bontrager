@@ -86,9 +86,8 @@ d1a = list(stem_length = dat$stem_length,
 m1.1a = ulam(
   alist(
     stem_length ~ dnorm(mu, sigma),
-    mu <- aG[genotype] + treatment*bT + treatment*bGT[genotype],
+    mu <- aG[genotype] + treatment*bGT[genotype],
     aG[genotype] ~ dnorm(150, 25),
-    bT ~ dnorm(0, 10),
     bGT[genotype] ~ dnorm(0, 10),
     sigma ~ dexp(1)),
   data = d1a, chains = 2, cores = 2, iter = 2000, log_lik = TRUE)
@@ -97,21 +96,20 @@ precis(m1.1a, depth = 2)
 ```
 
 ```
-##              mean       sd      5.5%       94.5%    n_eff      Rhat
-## aG[1]  147.780892 7.239774 136.07889 159.2051468 2173.243 1.0001235
-## aG[2]  217.612974 7.562166 205.30640 229.7787884 2303.562 0.9996280
-## aG[3]  202.434002 7.370705 190.84081 214.1598571 2195.080 1.0000475
-## aG[4]  148.844882 7.277049 137.35683 160.4021694 2320.849 1.0014475
-## aG[5]  143.987971 5.786843 134.85566 153.2622534 2472.121 0.9993037
-## aG[6]  145.505606 5.645155 136.26998 154.5375466 2615.893 0.9998569
-## bT     -43.708481 5.135585 -52.06583 -35.3741083 1534.856 0.9999796
-## bGT[1]  -6.367092 7.924858 -19.15889   6.5511457 2601.381 1.0004693
-## bGT[2]  -3.709366 7.855713 -16.06318   8.9647882 2225.990 0.9993764
-## bGT[3]  -9.099412 8.365736 -22.48257   4.1757977 2332.074 0.9995110
-## bGT[4]  -6.732764 7.827651 -19.02508   5.8110090 2064.501 1.0014739
-## bGT[5]  -6.294166 7.595913 -18.81172   5.1845002 1949.918 1.0002205
-## bGT[6] -11.585118 7.651205 -23.59840   0.3660902 2286.782 1.0002082
-## sigma   21.725531 1.538845  19.42200  24.3191630 2064.387 1.0019506
+##             mean       sd      5.5%       94.5%    n_eff      Rhat
+## aG[1]  133.43822 8.766699 119.28100 147.8937603 1879.869 0.9995285
+## aG[2]  200.30751 8.851592 186.25139 214.2563619 1815.127 1.0010183
+## aG[3]  185.04395 8.772468 171.03862 198.8535996 1888.993 0.9992768
+## aG[4]  134.11242 8.425630 120.52610 147.4253207 1989.338 0.9999555
+## aG[5]  132.95336 6.834321 122.06866 143.7474494 1932.280 1.0002048
+## aG[6]  134.95852 6.867898 123.76934 145.4985886 2325.408 0.9991783
+## bGT[1] -17.77171 8.865065 -31.73144  -3.5745036 1951.028 1.0002704
+## bGT[2] -14.46885 8.821410 -29.08300  -0.3905285 2200.634 1.0004987
+## bGT[3] -18.14006 8.465833 -31.61125  -4.8381615 2066.537 0.9991366
+## bGT[4] -17.73231 8.565834 -31.38626  -4.2279664 1906.541 0.9997314
+## bGT[5] -22.95399 7.993944 -35.86687 -10.4653608 1864.977 0.9992642
+## bGT[6] -24.88427 8.216869 -37.52019 -12.0372739 1946.691 1.0004075
+## sigma   28.00008 2.093755  24.75132  31.4560609 1798.318 0.9993834
 ```
 
 ```r
@@ -119,6 +117,7 @@ plot(precis(m1.1a, depth = 2))
 ```
 
 ![](tomato_growth_files/figure-html/unnamed-chunk-2-1.png)<!-- -->
+
 
 ```r
 d1b = list(stem_length = dat$stem_length, 
@@ -153,7 +152,8 @@ precis(m1.1b, depth = 2)
 plot(precis(m1.1b, depth = 2))
 ```
 
-![](tomato_growth_files/figure-html/unnamed-chunk-2-2.png)<!-- -->
+![](tomato_growth_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
+
 
 ```r
 d1c = list(stem_length = dat$stem_length, 
@@ -162,7 +162,8 @@ d1c = list(stem_length = dat$stem_length,
 m1.1c = ulam(
   alist(
     stem_length ~ dnorm(mu, sigma),
-    mu <- treatment*bT,
+    mu <- a + treatment*bT,
+    a ~ dnorm(150, 25),
     bT ~ dnorm(0, 10),
     sigma ~ dexp(1)),
   data = d1c, chains = 2, cores = 2, iter = 2000, log_lik = TRUE)
@@ -171,16 +172,18 @@ precis(m1.1c, depth = 2)
 ```
 
 ```
-##           mean       sd     5.5%     94.5%    n_eff      Rhat
-## bT    32.36252 8.376589 18.88298  45.60232 1123.322 0.9994129
-## sigma 97.11141 4.517366 89.99911 104.30167 1196.579 1.0021598
+##            mean       sd      5.5%     94.5%    n_eff      Rhat
+## a     158.22000 4.596201 150.81786 165.52546 1244.084 0.9995774
+## bT    -37.95145 6.275046 -48.06831 -27.76890 1294.048 0.9995533
+## sigma  34.27776 2.215256  30.82417  38.10267 1326.850 0.9991172
 ```
 
 ```r
 plot(precis(m1.1c, depth = 2))
 ```
 
-![](tomato_growth_files/figure-html/unnamed-chunk-2-3.png)<!-- -->
+![](tomato_growth_files/figure-html/unnamed-chunk-4-1.png)<!-- -->
+
 
 ```r
 d1d = list(stem_length = dat$stem_length, 
@@ -212,18 +215,18 @@ precis(m1.1d, depth = 2)
 plot(precis(m1.1d, depth = 2))
 ```
 
-![](tomato_growth_files/figure-html/unnamed-chunk-2-4.png)<!-- -->
+![](tomato_growth_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
 
 ```r
 compare(m1.1a, m1.1b, m1.1c, m1.1d)
 ```
 
 ```
-##            WAIC       SE      dWAIC       dSE     pWAIC       weight
-## m1.1b  821.3381 17.09407   0.000000        NA  8.775444 8.313631e-01
-## m1.1a  824.5287 17.28907   3.190638  1.314702 11.457367 1.686369e-01
-## m1.1d  909.2591 13.63630  87.920994 12.247774  7.764977 6.729604e-20
-## m1.1c 1151.6618 16.40932 330.323714 20.378789  1.035800 1.552057e-72
+##            WAIC       SE     dWAIC       dSE     pWAIC       weight
+## m1.1b  821.3381 17.09407   0.00000        NA  8.775444 1.000000e+00
+## m1.1a  873.9631 15.72676  52.62509  9.410762 10.309670 3.737729e-12
+## m1.1d  909.2591 13.63630  87.92099 12.247774  7.764977 8.094663e-20
+## m1.1c 1151.6618 16.40932 330.32371 20.378789  1.035800 1.866882e-72
 ```
 
 All intercepts are positive and around 150-200, which is consistent with the data.
@@ -280,7 +283,7 @@ precis(m1.2, depth = 2)
 plot(precis(m1.2, depth = 2))
 ```
 
-![](tomato_growth_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
+![](tomato_growth_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
 
 c) use a hierarchical model that allows partial pooling across flats
 
@@ -359,11 +362,11 @@ precis(m1.3, depth = 2)
 plot(precis(m1.3, depth = 2))
 ```
 
-![](tomato_growth_files/figure-html/unnamed-chunk-4-1.png)<!-- -->
+![](tomato_growth_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
 
 
 
-Q3) Compare the models, which is preferred?
+## Q3) Compare the models, which is preferred?
 
 
 ```r
@@ -379,13 +382,12 @@ compare(m1.1b, m1.2, m1.3)
 
 The model without pooling but with flats is preferred. 
 
-Q4) Using the hierarchical model, make posterior predictions
+## Q4) Using the hierarchical model, make posterior predictions
 a) for average cluster
 
 
 ```r
 post = extract.samples(m1.3)
-
 
 avg_flat = rnorm(2000, 0, post$f_sigma)
 
@@ -403,9 +405,9 @@ b) for same clusters
 c) showing the "marginal" from cluster
 d) showing new clusters.
 
-Q5) Reparameterize the model to help with divergent transitions (even if there aren't any)
+## Q5) Reparameterize the model to help with divergent transitions (even if there aren't any)
 
-Q6--optional)
+## Q6--optional)
 a) Which genotypes differ from MoneyMaker in Sun conditions?
 b) Which genotypes differ from MoneyMaker in Shade conditions?
 c) Which genotypes differ from MoneyMaker in their response to shade (difference in sun vs shade)?
