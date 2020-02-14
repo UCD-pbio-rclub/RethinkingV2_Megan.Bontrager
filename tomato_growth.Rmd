@@ -10,11 +10,6 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-
-library(tidyverse)
-library(rethinking)
-
-
 ```
 
 This csv has measurements of tomato internodes and petioles from wildtype (Moneymaker) and various phytochrome mutant lines.  Measurements were made at 3 time points, 21, 28, and 35 days after germination under two treatments, simulated sun and simulated shade.
@@ -195,12 +190,6 @@ a) for average cluster
 
 ```{r}
 
-d_
-
-post = extract.samples(m1.3)
-
-avg_flat = rnorm(2000, 0, post$f_sigma)
-
 # Assume block effect is 0
 d_link1 = link(m1.3, replace = list(flat = 0))
 
@@ -243,4 +232,32 @@ precis(m1.3, m1.3_re)
 a) Which genotypes differ from MoneyMaker in Sun conditions?
 b) Which genotypes differ from MoneyMaker in Shade conditions?
 c) Which genotypes differ from MoneyMaker in their response to shade (difference in sun vs shade)?
+
+```{r}
+post = extract.samples(m1.3)
+
+shade_preds = post$aG %>% 
+  as.data.frame() %>% 
+  pivot_longer(V1:V6) %>% 
+  group_by(name) %>%
+  point_interval(value, 
+                 .width = 0.95, .point = median, .interval = hdi)
+
+ggplot(shade_preds) +
+  geom_pointinterval(aes(x = name, y = value, ymin = .lower, ymax= .upper))
+
+sun_preds = post$aG %>% 
+  as.data.frame() %>% 
+  bind_cols(., bT = post$bT) %>% 
+  pivot_longer(V1:V6) %>% 
+  group_by(name) %>%
+  mutate(value = value + bT) %>% 
+  point_interval(value, 
+                 .width = 0.95, .point = median, .interval = hdi)
+
+ggplot(sun_preds) +
+  geom_pointinterval(aes(x = name, y = value, ymin = .lower, ymax= .upper))
+
+
+```
 
