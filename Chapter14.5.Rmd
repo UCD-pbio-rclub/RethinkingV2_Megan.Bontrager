@@ -68,6 +68,8 @@ for(i in 1:10)
     K[i,j] = median(post$etasq)*exp(-median(post$rhosq)*islandsDistMatrix[i,j]^2)
 diag(K) = median(post$etasq) + 0.01
 
+round(K, 2)
+
 Rho = round(cov2cor(K), 2)
 
 colnames(Rho) = c("Ml", "Ti", "SC", "Ya", "Fi", "Tr", "Ch", "Mn", "To", "Ha")
@@ -89,7 +91,7 @@ for(i in 1:10)
 
 logpop.seq = seq(from = 6, to = 14, length.out = 30)
 
-lambda = sapply(logpop.seq, function(lp) exp(post$a + post$b*lp - post$g))
+lambda = sapply(logpop.seq, function(lp) post$a*exp(lp)^post$b/post$g)
 lambda.median = apply(lambda, 2, median)
 lambda.PI80 = apply(lambda, 2, PI, prob = 0.8)
 
@@ -105,8 +107,9 @@ for(i in 1:10)
     if(i < j)
       lines(c(d$logpop[i], d$logpop[j]), 
             c(d$total_tools[i], d$total_tools[j]),
-            lwd = 2, col = col.alpha("black", Rho[i,j]^2)
+            lwd = 2, col = col.alpha("black", Rho[i,j])
               )
+# colnames(Rho) = c("Ml", "Ti", "SC", "Ya", "Fi", "Tr", "Ch", "Mn", "To", "Ha")
 
 ```
 
