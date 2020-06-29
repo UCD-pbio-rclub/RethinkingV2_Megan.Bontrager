@@ -1,0 +1,92 @@
+---
+title: "Chapter14.5.2"
+author: "Megan Bontrager"
+date: "6/29/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+14M5. Modify the phylogenetic distance example to use group size as the outcome and brain size as a predictor. Assuming brain size influences group size, what is your estimate of the effect? How does phylogeny influence the estimate?
+
+First, look at the phylogeny.
+```{r, message=FALSE, error=FALSE}
+library(rethinking)
+library(knitr)
+data(Primates301)
+data(Primates301_nex)
+
+library(ape)
+plot(ladderize(Primates301_nex), type = "fan", font = 1, no.margin = TRUE, cex = 0.5,label.offset = 1)
+
+```
+
+Prepare data:
+
+```{r}
+d = Primates301
+d$name = as.character(d$name)
+dstan = d[complete.cases(d$group_size, d$body, d$brain),]
+spp_obs = dstan$name
+
+dat_list = list(N_spp = nrow(dstan),
+                M = standardize(log(dstan$body)),
+                B = standardize(log(dstan$brain)),
+                G = standardize(log(dstan$group_size)),
+                Imat = diag(nrow(dstan)))
+
+```
+
+Prepare cov matrix:
+
+```{r}
+tree_trimmed = keep.tip(Primates301_nex, spp_obs)
+Rbm = corBrownian(phy = tree_trimmed)
+V = vcv(Rbm)
+Dmat = cophenetic(tree_trimmed)
+plot(Dmat, V)
+dat_list$V = V[spp_obs, spp_obs]
+dat_list$R = dat_list$V/max(V) 
+image(V)
+```
+
+
+Run model with group size as the outcome and brain size as a predictor:
+
+Without phylogeny:
+
+```{r, message = FALSE, cache = TRUE}
+m1 = ulam(alist(G ~ multi_normal(mu, SIGMA),
+                mu <- a + bB *B +bM*M,
+                matrix[N_spp, N_spp]: SIGMA <- Imat * sigma_sq,
+                a ~ normal(0, 1),
+                c(bM, bB) ~ normal(0, 0.5),
+                sigma_sq ~ exponential(1)),
+          data = dat_list, chains = 4, cores = 4)
+```
+
+
+```{r}
+precis(m1)
+plot(precis(m1))
+```
+
+With phylogeny:
+
+```{r, message = FALSE, cache = TRUE}
+m2 = ulam(alist(G ~ multi_normal(mu, SIGMA),
+                mu <- a + bB*B +bM*M,
+                matrix[N_spp, N_spp]: SIGMA <- R * sigma_sq,
+                a ~ normal(0, 1),
+                c(bM, bB) ~ normal(0, 0.5),
+                sigma_sq ~ exponential(1)),
+          data = dat_list, chains = 4, cores = 4)
+```
+
+```{r}
+precis(m2)
+plot(precis(m2))
+```
+
