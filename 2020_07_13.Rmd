@@ -1,0 +1,275 @@
+---
+title: "2020_07_13"
+author: "Megan Bontrager"
+date: "7/13/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 15E1
+
+```{r, eval = FALSE}
+
+    T ~ dpoisson(lambda),
+    log(lambda) <- a + B*log(P_true)
+    P_obs ~ dnorm(P_true, SE_P), 
+    P_true ~ dnorm(0, 1),
+    a ~ dnorm(0, 10), 
+    B ~ dnorm(0, 1),
+    SE_P ~ dexp(1))
+
+# How to incorporate vector notation, eg.:
+    # vector[N]:P_true ~ dnorm(mu, sigma), 
+```
+
+
+### 15E2
+
+```{r,  eval = FALSE}
+
+    T ~ dpoisson(lambda),
+    log(lambda) <- a + B*log(Pi)
+    Pi ~ dnorm(v, SE_P)
+    a ~ dnorm(0, 10), 
+    B ~ dnorm(0, 1),
+    v ~ dnorm(0,1),
+    SE_P ~ dexp(1))
+
+```
+
+### 15M3
+Repeat the divorce data measurement error models, but this time double the standard errors. Can you explain how doubling the standard errors impacts inference?
+
+```{r, cache=TRUE, message=FALSE}
+library(rethinking)
+data("WaffleDivorce")
+d = WaffleDivorce
+
+ggplot(d, aes(x = MedianAgeMarriage, y = Divorce)) +
+  geom_errorbar(aes(x = MedianAgeMarriage, ymin = Divorce-Divorce.SE, ymax = Divorce+Divorce.SE)) +
+  geom_point()
+```
+
+First with original SE:
+
+```{r, cache=TRUE, message=FALSE}
+
+d_list1 = list(
+  D_obs = standardize(d$Divorce),
+  D_sd = d$Divorce.SE/sd(d$Divorce),
+  M = standardize(d$Marriage),
+  A  = standardize(d$MedianAgeMarriage),
+  N = nrow(d)
+)
+
+m1 = ulam(
+  alist(
+    D_obs ~ dnorm(D_true, D_sd),
+    vector[N]:D_true ~ dnorm(mu, sigma), 
+    mu <- a + bA*A + bM*M,
+    a ~ dnorm(0, 0.2), 
+    bA ~ dnorm(0, 0.5),
+    bM ~ dnorm(0, 0.5),
+    sigma ~ dexp(1)),
+    data = d_list1, chains = 4, cores = 4,  iter = 2000)
+
+```
+
+Now with doubled SE: 
+
+```{r, cache=TRUE, message=FALSE}
+
+d_list2 = list(
+  D_obs = standardize(d$Divorce),
+  D_sd = 2*d$Divorce.SE/sd(d$Divorce),
+  M = standardize(d$Marriage),
+  A  = standardize(d$MedianAgeMarriage),
+  N = nrow(d)
+)
+
+m2 = ulam(
+  alist(
+    D_obs ~ dnorm(D_true, D_sd),
+    vector[N]:D_true ~ dnorm(mu, sigma), 
+    mu <- a + bA*A + bM*M,
+    a ~ dnorm(0, 0.2), 
+    bA ~ dnorm(0, 0.5),
+    bM ~ dnorm(0, 0.5),
+    sigma ~ dexp(1)),
+    data = d_list2, chains = 4, cores = 4, iter = 2000)
+
+```
+
+Look at output:
+
+```{r, cache=TRUE, message=FALSE}
+precis(m1)
+precis(m2)
+```
+
+Most parameter estimates aren't super different. 
+
+Why is sigma smaller when SE is doubled? Is it because there is more uncertainty for each individual state, so each can shrink further towards the mean? 
+
+Plot to try to understand:
+
+```{r, cache=TRUE, message=FALSE}
+
+post1 = extract.samples(m1)
+D_est1 = apply(post1$D_true, 2, mean)
+
+plot(d_list1$M, d_list1$D_obs, pch = 16, col = rangi2)
+points(d_list1$M, D_est1)
+for (i in 1:nrow(d))
+  lines(c(d_list1$M[i], d_list1$M[i]), c(d_list1$D_obs[i], D_est1[i]))
+
+
+post2 = extract.samples(m2)
+D_est2 = apply(post2$D_true, 2, mean)
+
+plot(d_list2$M, d_list2$D_obs, pch = 16, col = rangi2)
+points(d_list2$M, D_est2)
+for (i in 1:nrow(d))
+  lines(c(d_list2$M[i], d_list2$M[i]), c(d_list2$D_obs[i], D_est2[i]))
+
+```
+
+Seems like that might be the case.
+
+
+### 15H1
+
+The data in data(elephants) are counts of matings observed for bull elephants of differing ages. There is a strong positive relationship between age and matings. However, age is not always assessed accurately. First, fit a Poisson model predicting MATINGS with AGE as a predictor. Second, assume that the observed AGE values are uncertain and have a standard error of ±5 years. Re-estimate the relationship between MATINGS and AGE, incorporating this measurement error. Compare the inferences of the two models.
+
+Load data:
+
+```{r, cache = TRUE}
+data(elephants)
+
+d3 = list(
+  age = elephants$AGE,
+  matings = elephants$MATINGS
+)
+```
+
+Fit simple model:
+
+```{r, cache = TRUE, message=FALSE}
+m3 = ulam(
+  alist(
+    matings ~ dpois(lambda),
+    log(lambda) <- a + B*age,
+    a ~ dnorm(0, 10), 
+    B ~ dnorm(0, 1)), data = d3, chains = 4, cores = 4
+)
+
+precis(m3)
+
+```
+
+Now fit model with SE of age.
+
+```{r, cache = TRUE, message=FALSE}
+d3$N = nrow(elephants)
+
+m4 = ulam(
+  alist(
+    matings ~ dpois(lambda),
+    log(lambda) <- a + B*age_est,
+    age_est ~ dnorm(age, 5),
+    # But 5 is SE, need to change to sd
+    vector[N]:age ~ dnorm(0, 1),
+    a ~ dnorm(0, 10), 
+    B ~ dnorm(0, 1)), data = d3, chains = 4, cores = 4
+)
+
+precis(m4)
+
+```
+
+
+
+### 15H2 
+
+Repeat the model fitting problem above, now increasing the assumed standard error on AGE. How large does the standard error have to get before the posterior mean for the coefficient on AGE reaches zero?
+
+It seems like it already is pretty close. Maybe I set up the above model wrong.
+
+```{r, cache=TRUE}
+
+
+```
+
+
+
+
+### From book
+
+```{r, cache = TRUE, message = FALSE, error = FALSE, eval = FALSE}
+library(rethinking)
+data("WaffleDivorce")
+d = WaffleDivorce
+
+ggplot(d, aes(x = MedianAgeMarriage, y = Divorce)) +
+  geom_errorbar(aes(x = MedianAgeMarriage, ymin = Divorce-Divorce.SE, ymax = Divorce+Divorce.SE)) +
+  geom_point()
+
+d_list = list(
+  D_obs = standardize(d$Divorce),
+  D_sd = d$Divorce.SE/sd(d$Divorce),
+  M = standardize(d$Marriage),
+  A  = standardize(d$MedianAgeMarriage),
+  N = nrow(d)
+)
+
+m15.1 = ulam(
+  alist(
+    D_obs ~ dnorm(D_true, D_sd),
+    vector[N]:D_true ~ dnorm(mu, sigma), 
+    mu <- a + bA*A + bM*M,
+    a ~ dnorm(0, 0.2), 
+    bA ~ dnorm(0, 0.5),
+    bM ~ dnorm(0, 0.5),
+    sigma ~ dexp(1)),
+    data = d_list, chains = 4, cores = 4)
+precis(m15.1)
+
+
+d_list = list(
+  D_obs = standardize(d$Divorce),
+  D_sd = d$Divorce.SE/sd(d$Divorce),
+  M_obs = standardize(d$Marriage),
+  M_sd = d$Marriage.SE/sd(d$Marriage),
+  A  = standardize(d$MedianAgeMarriage),
+  N = nrow(d)
+)
+
+m15.2 = ulam(
+  alist(
+    D_obs ~ dnorm(D_est, D_sd),
+    vector[N]:D_est ~ dnorm(mu, sigma), 
+    mu <- a + bA*A + bM*M_est[i],
+    M_obs ~ dnorm(M_est, M_sd),
+    vector[N]:M_est ~ dnorm(0, 1),
+    a ~ dnorm(0, 0.2), 
+    bA ~ dnorm(0, 0.5),
+    bM ~ dnorm(0, 0.5),
+    sigma ~ dexp(1)),
+    data = d_list, chains = 4, cores = 4)
+# precis(m15.2, depth = 2)
+
+post = extract.samples(m15.2)
+D_est = apply(post$D_est, 2, mean)
+M_est = apply(post$M_est, 2, mean)
+
+plot(d_list$M_obs, d_list$D_obs, pch = 16, col = rangi2)
+points(M_est, D_est)
+for (i in 1:nrow(d)) 
+  lines(c(d_list$M_obs[i], M_est[i]), c(d_list$D_obs[i], D_est[i]))
+
+
+```
+
