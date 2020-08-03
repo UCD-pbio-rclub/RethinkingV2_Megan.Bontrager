@@ -228,8 +228,8 @@ pr = extract.prior(m16.1)
 ## 
 ## SAMPLING FOR MODEL 'b7f5ae462b975aebe1710b5494a9f402' NOW (CHAIN 1).
 ## Chain 1: 
-## Chain 1: Gradient evaluation took 0.00017 seconds
-## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 1.7 seconds.
+## Chain 1: Gradient evaluation took 0.000243 seconds
+## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 2.43 seconds.
 ## Chain 1: Adjust your expectations accordingly!
 ## Chain 1: 
 ## Chain 1: 
@@ -246,14 +246,14 @@ pr = extract.prior(m16.1)
 ## Chain 1: Iteration: 1800 / 2000 [ 90%]  (Sampling)
 ## Chain 1: Iteration: 2000 / 2000 [100%]  (Sampling)
 ## Chain 1: 
-## Chain 1:  Elapsed Time: 0.648187 seconds (Warm-up)
-## Chain 1:                0.510184 seconds (Sampling)
-## Chain 1:                1.15837 seconds (Total)
+## Chain 1:  Elapsed Time: 0.664786 seconds (Warm-up)
+## Chain 1:                0.513754 seconds (Sampling)
+## Chain 1:                1.17854 seconds (Total)
 ## Chain 1:
 ```
 
 ```r
-mu = link(m16.1, post = pr, data = list(h = h_seq))
+mu = as.matrix(link(m16.1, post = pr, data = list(h = h_seq)))
 summary(exp(mu[,2]))
 ```
 
@@ -264,11 +264,18 @@ summary(exp(mu[,2]))
 
 ```r
 plot(d$h, d$w, xlim = c(0, max(d$h)), ylim = c(0, max(d$w)), col = rangi2, lwd = 2, xlab = "height (scaled)", ylab = "weight (scaled)")
-mu_mean = apply(mu, 2, mean)
-w_CI = apply(mu, 2, PI)
-lines(h_seq, exp(mu_mean))
-shade(exp(w_CI), h_seq)
+# mu_mean = apply(mu, 2, mean)
+# w_CI = apply(mu, 2, PI)
+# lines(h_seq, exp(mu_mean))
+# shade(exp(w_CI), h_seq)
+for (i in 1:1000){ 
+  lines(h_seq, exp(mu[i,]), col = col.alpha("black", 0.2))
+  }
 ```
 
 ![](Chapter16.1_files/figure-html/unnamed-chunk-6-3.png)<!-- -->
+
+
+
+
 
