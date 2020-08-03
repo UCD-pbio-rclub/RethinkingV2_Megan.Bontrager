@@ -1,0 +1,118 @@
+---
+title: "Chapter16.1"
+author: "Megan Bontrager"
+date: "8/3/2020"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rethinking)
+```
+
+## 16M1
+
+Modify the cylinder height model, m16.1, so that the exponent 3 on height is instead a free parameter. Do you recover the value of 3 or not? Plot the posterior predictions for the new model. How do they differ from those of m16.1?
+
+Load and scale data:
+
+```{r}
+data("Howell1")
+d = Howell1
+d$w = d$weight/mean(d$weight)
+d$h = d$height/mean(d$height)
+```
+
+Original model:
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE, error=FALSE}
+
+m16.1 = ulam(
+  alist(
+    w ~ dlnorm(mu, sigma), 
+    exp(mu) <- 3.141593 * k * p^2 * h^3,
+    p ~ beta(2, 18),
+    k ~ exponential(0.5),
+    sigma ~ exponential(1)
+  ),
+  data = d, chains = 4, cores = 4
+)
+
+```
+
+Look at summary and posterior predictions:
+
+```{r}
+precis(m16.1)
+pairs(m16.1)
+h_seq = seq(from = 0 , to = max(d$w), length.out = 30)
+w_sim = sim(m16.1, data = list(h = h_seq))
+mu_mean = apply(w_sim, 2, mean)
+w_CI = apply(w_sim, 2, PI)
+plot(d$h, d$w, xlim = c(0, max(d$h)), ylim = c(0, max(d$w)), col = rangi2, lwd = 2, xlab = "height (scaled)", ylab = "weight (scaled)")
+lines(h_seq, mu_mean)
+shade(w_CI, h_seq)
+```
+
+New model with the exponent on height estimated from the data:
+
+This exponent should be positive, and since we aleardy think it's near 3, going with an exponential on 1, which should have a larger mean than the exp(0.5).
+
+(would be better to do some prior prediction to figure out best prior for l)
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE, error=FALSE}
+
+m16.1b = ulam(
+  alist(
+    w ~ dlnorm(mu, sigma), 
+    exp(mu) <- 3.141593 * k * p^2 * h^l,
+    p ~ beta(2, 18),
+    k ~ exponential(0.5),
+    l ~ exponential(0.1),
+    sigma ~ exponential(1)
+  ),
+  data = d, chains = 4, cores = 4
+)
+
+```
+
+Getting some treedepth warnings.
+
+Look at summary and posterior predictions:
+
+```{r}
+precis(m16.1b)
+pairs(m16.1b)
+w_sim = sim(m16.1b, data = list(h = h_seq))
+mu_mean = apply(w_sim, 2, mean)
+w_CI = apply(w_sim, 2, PI)
+plot(d$h, d$w, xlim = c(0, max(d$h)), ylim = c(0, max(d$w)), col = rangi2, lwd = 2, xlab = "height (scaled)", ylab = "weight (scaled)")
+lines(h_seq, mu_mean)
+shade(w_CI, h_seq)
+```
+
+Posterior predictions look similar, but follow the data a bit more at the low end in particular.
+
+## 16M2
+
+Conduct a prior predictive simulation for the cylinder height model. Begin with the priors in the chapter. Do these produce reasonable prior height distributions? If not, which modifications do you suggest?
+
+(Does he mean height or weight?)
+
+```{r}
+hist(d$h) # 0 to 1.3
+hist(d$w) # 0 to 1.6
+
+pr = extract.prior(m16.1)
+mu = link(m16.1, post = pr, data = list(h = h_seq))
+summary(exp(mu[,2]))
+plot(d$h, d$w, xlim = c(0, max(d$h)), ylim = c(0, max(d$w)), col = rangi2, lwd = 2, xlab = "height (scaled)", ylab = "weight (scaled)")
+mu_mean = apply(mu, 2, mean)
+w_CI = apply(mu, 2, PI)
+lines(h_seq, exp(mu_mean))
+shade(exp(w_CI), h_seq)
+
+```
+
