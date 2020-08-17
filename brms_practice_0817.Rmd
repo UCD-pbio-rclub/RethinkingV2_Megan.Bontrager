@@ -100,58 +100,116 @@ predict(m4.1.2, newdata = data.frame(w = std_weights), summary = TRUE, probs = c
 Parameter estimates are nearly identical. Predictions too.
 
 
-<!-- ### 4H2 -->
+### 4H2
 
-<!-- **Select out all the rows in the Howell1 data with ages below 18 years of age. If you do it right, you should end up with a new data frame with 192 rows in it.** -->
+**Select out all the rows in the Howell1 data with ages below 18 years of age. If you do it right, you should end up with a new data frame with 192 rows in it.**
 
-<!-- **(a) Fit a linear regression to these data, using quap. Present and interpret the estimates. For every 10 units of increase in weight, how much taller does the model predict a child gets?** -->
+**(a) Fit a linear regression to these data, using quap. Present and interpret the estimates. For every 10 units of increase in weight, how much taller does the model predict a child gets?**
 
-<!-- For every 10 units increase in weight, the model predicts that a child gets 27.2 cm taller. -->
+For every 10 units increase in weight, the model predicts that a child gets 27.1 cm taller.
+
+```{r, error=FALSE, message=FALSE, warning = FALSE, cache=TRUE}
+juv = Howell1 %>% 
+  filter(age < 18) %>% 
+  mutate(w = standardize(weight))
+
+j_mean = mean(juv$weight)
+j_sd= sd(juv$weight)
+
+mean(juv$height)
+
+m4.2.1 = ulam(
+  alist(
+    height ~ dnorm(mu, sigma),
+    mu <- a + b*w,
+    a ~ dnorm(100, 20),
+    b ~ dlnorm(0, 1),
+    sigma ~ dexp(1)
+  ),
+  data = juv, chains = 2
+)
+
+precis(m4.2.1)
+
+# b = 24.22
+# for every scaled unit of weight, 24.22 effect on height
+24.22/j_sd
+# One unit of weight has a 2.71 effect on height
+24.22/j_sd*10
+```
+
+With brms: 
+```{r, error=FALSE, message=FALSE, warning = FALSE, cache=TRUE}
+m4.2.2 <- brm(height ~ w, data = juv,
+               prior=c(
+                 set_prior("normal(100, 20)", class = "Intercept"),
+                 set_prior("lognormal(0,1)", class = "b", lb = 0),
+                 set_prior("exponential(1)", class = "sigma"))
+               )
+summary(m4.2.2)
+```
+Parameter estimates are the same. 
+
+**(b) Plot the raw data, with height on the vertical axis and weight on the horizontal axis. Super- impose the MAP regression line and 89% HPDI for the mean. Also superimpose the 89% HPDI for predicted heights.**
+
+With ulam model:
+
+```{r}
+max(juv$w)
+min(juv$w)
+weight_seq = seq(from = min(juv$w), to = max(juv$w), length.out = 100)
+mu = link(m4.2.1, data = data.frame(w = weight_seq))
+mu_mean = apply(mu, 2, mean)
+mu_hpdi = apply(mu, 2, HPDI, prob = 0.89)
+pred_hpdi = apply(sim(m4.2.1, data = list(w = weight_seq)), 2, HPDI, prob = 0.89)
+
+plot(height ~ w, data = juv)
+lines(weight_seq, mu_mean)
+shade(mu_hpdi, weight_seq)
+shade(pred_hpdi, weight_seq)
+
+```
+
+With BRMS:
+
+```{r}
+library(tidybayes)
+library(modelr)
+
+juv %>%
+  data_grid(w = seq_range(w, n = 51)) %>%
+  add_fitted_draws(m4.2.2) %>%
+  ggplot(aes(x = w, y = height)) +
+  stat_lineribbon(aes(y = .value), .width = 0.89, alpha = 0.25) +
+  geom_point(data = juv) 
+
+juv %>%
+  data_grid(w = seq_range(w, n = 51)) %>%
+  add_predicted_draws(m4.2.2) %>%
+  ggplot(aes(x = w, y = height)) +
+  stat_lineribbon(aes(y = .prediction), .width = c(.89), alpha = 0.25) +
+  geom_point(data = juv) 
+```
+
+And would just take a bit of editing to put the two on the same plot. 
+
+**(c) What aspects of the model fit concern you? Describe the kinds of assumptions you would change, if any, to improve the model. You don’t have to write any new code. Just explain what the model appears to be doing a bad job of, and what you hypothesize would be a better model.**
+
+The model is performing poorly at the low and high ends of the weight axis. It might be better to change the model to allow some curvature.
+
+Could try to fix that with a quadratic fit, or a GAMM.
 
 
-<!-- ```{r} -->
-
-<!-- juv = Howell1 %>% filter(age < 18) -->
-
-<!-- xbar <- mean(juv$weight) -->
-
-<!-- mod_juv = quap( -->
-<!--   alist( -->
-<!--     height ~ dnorm(mu, sigma), -->
-<!--     mu <- a + b*(weight - xbar), -->
-<!--     a ~ dnorm(178, 20), -->
-<!--     b ~ dlnorm(0, 1), -->
-<!--     sigma ~ dunif(0, 50) -->
-<!--   ),  -->
-<!--   data = juv -->
-<!-- ) -->
-
-<!-- precis(mod_juv) -->
-
-<!-- ``` -->
-
-<!-- **(b) Plot the raw data, with height on the vertical axis and weight on the horizontal axis. Super- impose the MAP regression line and 89% HPDI for the mean. Also superimpose the 89% HPDI for predicted heights.** -->
-
-<!-- ```{r} -->
-<!-- max(juv$weight) -->
-<!-- weight_seq = seq(4, 45) -->
-<!-- mu = link(mod_juv, data = data.frame(weight = weight_seq)) -->
-<!-- mu_mean = apply(mu, 2, mean) -->
-<!-- mu_hpdi = apply(mu, 2, HPDI, prob = 0.89) -->
-<!-- pred_hpdi = apply(sim(mod_juv, data = list(weight = weight_seq)), 2, HPDI, prob = 0.89) -->
-
-<!-- plot(height ~ weight, data = juv) -->
-<!-- lines(weight_seq, mu_mean) -->
-<!-- shade(mu_hpdi, weight_seq) -->
-<!-- shade(pred_hpdi, weight_seq) -->
-
-<!-- ``` -->
-
-<!-- **(c) What aspects of the model fit concern you? Describe the kinds of assumptions you would change, if any, to improve the model. You don’t have to write any new code. Just explain what the model appears to be doing a bad job of, and what you hypothesize would be a better model.** -->
-
-<!-- The model is performing poorly at the low and high ends of the weight axis. It might be better to change the model to allow some curvature. -->
-
-
+```{r, error=FALSE, message=FALSE, warning = FALSE, cache=TRUE, eval = FALSE}
+library(rstan)
+m4.2.3 <- stan_gamm4(height ~ w, data = juv,
+               prior=c(
+                 set_prior("normal(100, 20)", class = "Intercept"),
+                 set_prior("lognormal(0,1)", class = "b", lb = 0),
+                 set_prior("exponential(1)", class = "sigma"))
+               )
+summary(m4.2.3)
+```
 
 <!-- ## Tomato problem -->
 
