@@ -1,0 +1,172 @@
+---
+title: "streptanthus_germination"
+author: "Megan Bontrager"
+date: "8/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+pops: species/population
+temps: temperature
+wps: water potential
+date: date of observation
+total_seeds: number of seeds plated for the experiment
+germ: the number of germinants found on this day
+day: day of the observation relative to start date of the experiment
+
+1.  Subset the data to only include wps==0.  We may look at water potential in a future week.
+
+2. Let's start with a single pop "STDI".  Evaluate models relate germination rate to temperature.  Explain your model choice and prior choice.  Try to do this both with ulam and brm.
+
+3. now expand the data set to all species/populations.  Include species/pop (use "pops" as the predictor, don't worry about having a separate predictor for pops nested within species).  is partial pooling appropriate here?
+
+
+Load libraries and data
+
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(brms)
+library(rstan)
+library(tidybayes)
+library(rethinking)
+
+germ = read_csv("light_round1_tall.csv") %>% 
+  filter(wps == 0)
+
+stdi = germ %>% 
+  filter(pops == "STDI")
+
+```
+
+Julin's code for one event per row
+
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+
+one_per_row <- function(df) {
+  total_seed <- max(df$total_seeds, sum(df$germ))
+  newdata <- tibble(id=1:total_seed, germ=0, day=max(df$day))
+  df <- df %>% filter(germ>0)
+  count <- 1
+  if (nrow(df) > 0) {
+    for (i in 1:nrow(df)) { # we look at each row of the df where germination occured
+      for (j in 1:df$germ[i]) { # now update the newdata to reflect the germiantion of each seed
+        newdata$germ[count] <- 1
+        newdata$day[count]=df$day[i]
+        count <- count+1 # count keeps track of which individual we are at in the new data
+      } # for j
+    } # for i
+  } # if 
+  return(newdata)
+}
+
+germone <- stdi %>% group_by(temps) %>%
+  select(-cumulative_germ) %>% # not needed in this encoding (I think...in any case would need to be recalculated)
+  nest() %>%
+  mutate(newdata=map(data, one_per_row)) %>%
+  select(-data) %>%
+  unnest(newdata)
+
+germone
+```
+
+Three ways I can think of to model this data:
+- A zero-inflated rate model. Temperature affects the timing at which events occur. 
+This looks helpful: https://discourse.mc-stan.org/t/zero-inflated-gamma-model/6788/2
+- A 3 parameter log-logistic function, basically a dose response curve approach where you model maximum, inflection point, steepness. Might fit better (was looking nice with maximum likelihood fitting), but parameters are not as nicely interpretable as the zero-inflated gamma.
+- Ignore time, fit a zero-inflated binomial. Not as interesting as getting rate information.
+Maybe there are some more specialized survival model options as well. 
+
+First attempt: a zero inflated gamma model. 
+
+First, I thought, oh great, there is a hurdle gamma family in brms. But, I think that implementation is for if most occur at time zero, and then you want to characterize the distribution of non-zero events.
+
+So, need to fit some type of custom mixture of bernoulli (germination  = 0, 1) and gamma (time to event if non-zero germination).
+
+Not sure how best to do this. Maybe just directly in Stan?
+
+First want to see the rethinking code for a simple Bernoulli model.
+
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+
+germone %>% 
+  group_by(temps) %>% 
+  summarize(sum(germ))
+
+model_data <- list(
+	germ = germone$germ,
+	temp = germone$temps
+	)
+
+m1 = ulam(
+  alist(
+    germ ~ dbinom(1, p),
+    logit(p) <- a + temp*b,
+    a ~ dnorm(0, 4),
+    b ~ dnorm(0, 4)
+  ),
+  data = model_data, iter = 10
+)
+
+stancode(m1)
+```
+
+Ok, now want to see the brms version.
+
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+
+make_stancode(germ ~ temps, family = bernoulli, data = germone)
+
+```
+
+They somehow have the beta (temperature effect) embedded in their tagert statement, I think. Tricky.
+
+OK, and just want to see the zipoisson model from rethinking (I know this doesn't make sense with the data, but just feeding it in to see the stancode).
+
+
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+
+m3 = ulam(
+  alist(
+    germ ~ dzipois(p, l),
+    logit(p) <- a + temp*b,
+    logit(l) <- al + temp*bl,
+    a ~ dnorm(0, 4),
+    b ~ dnorm(0, 4),
+    al ~ dnorm(0, 4),
+    bl ~ dnorm(0, 4)
+  ),
+  data = model_data, iter = 10
+)
+
+stancode(m3)
+```
+
+
+OK and one more with Gamma:
+
+```{r}
+
+make_stancode(day ~ temps, family = Gamma, data = germone)
+
+```
+
+
+m3 = ulam(
+  alist(
+    germ ~ dgamma(r, s),
+    log(r) <- a + temp*b,
+    logit(l) <- al + temp*bl,
+    a ~ dnorm(0, 4),
+    b ~ dnorm(0, 4),
+    al ~ dnorm(0, 4),
+    bl ~ dnorm(0, 4)
+  ),
+  data = model_data, iter = 10
+)
+
+stancode(m3)
+```
