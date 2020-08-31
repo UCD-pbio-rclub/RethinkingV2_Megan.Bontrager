@@ -1,17 +1,17 @@
 data {
-  int<lower=1> n;
-  // int<lower=1> n_temp;
-  real <lower=0, upper=1> germ[n];
-  // real temp[n_temp];
-  real temp[n];
-  real<lower=0> day[n];
+  // int<lower=1> n;
+  // // int<lower=1> n_temp;
+  // real <lower=0, upper=1> germ[n];
+  // // real temp[n_temp];
+  // real temp[n];
+  // real<lower=0> day[n];
 }
 
 parameters {
-  real bt_gam;
-  real bt_zi;
-  real b0;
-  real log_scale;
+  // real bt_gam;
+  // real bt_zi;
+  // real b0;
+  // real log_scale;
 }
 
 // transformed parameters {
@@ -33,21 +33,20 @@ model {
   real beta[n];
   
   // priors
-  b0 ~ normal(0, 2);
-  bt_zi ~ normal(0, 2);
-  bt_gam ~ normal(0, 2);
-  log_scale ~ normal(1, 10);
+  D_temp ~ normal(0, 2);
+  C_temp ~ normal(0, 2);
+  B_temp ~ normal(0, 2);
   
   
   for (i in 1:n) {
     
-    p[i] = b0 + bt_zi*temp[i];
-    theta[i] = inv_logit(p[i]);
-    
-    a[i] = bt_gam*temp[n];
-    alpha[i] = log(a[i]);
-    beta[i] = exp(log_scale);
-  
+// F(x) = D_temp*temp/(1+(prop_germ/C_temp*temp)^(-B_temp*temp))
+
+mu = D_temp*temp/(1+exp(-B_temp*temp(log(prop_germ)-log(C_temp*temp)))
+
+// C = inflection point
+// D = upper limit
+// B = steepness of curve??
   
     if (germ[i] == 0) {
       target += bernoulli_lpmf(1 | theta[i]);
