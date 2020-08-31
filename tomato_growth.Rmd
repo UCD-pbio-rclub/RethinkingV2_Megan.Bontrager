@@ -10,6 +10,10 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+library(tidyverse)
+library(rethinking)
+library(tidybayes)
+
 ```
 
 This csv has measurements of tomato internodes and petioles from wildtype (Moneymaker) and various phytochrome mutant lines.  Measurements were made at 3 time points, 21, 28, and 35 days after germination under two treatments, simulated sun and simulated shade.
@@ -26,8 +30,6 @@ c) although flats are listed as 1-6, flats in sun and shade are separate. Create
 
 ```{r, cache = TRUE}
 
-library(tidyverse)
-library(rethinking)
 
 dat = read_csv("figure4phyE.csv") %>% 
   filter(day == 35) %>% 
@@ -191,12 +193,12 @@ a) for average cluster
 ```{r}
 
 # Assume block effect is 0
-d_link1 = link(m1.3, replace = list(flat = 0))
-
-avg_flat = rnorm(2000, 0, post$f_sigma)
-
-# Assume block effect is 0
-d_link1 = link(m1.3, replace = list(flat = avg_flat))
+# d_link1 = link(m1.3, replace = list(flat = 0))
+# 
+# avg_flat = rnorm(2000, 0, post$f_sigma)
+# 
+# # Assume block effect is 0
+# d_link1 = link(m1.3, replace = list(flat = avg_flat))
 
 ```
 
@@ -209,22 +211,22 @@ d) showing new clusters.
 
 ```{r, cache = TRUE}
 
-m1.3_re = ulam(
-  alist(
-    stem_length ~ dnorm(mu, sigma),
-    mu <- aG[genotype] + treatment*bT + bF[flat]*f_sigma,
-    aG[genotype] ~ dnorm(150, 25),
-    bT ~ dnorm(0, 10),
-    bF[flat] ~ dnorm(0, 10),
-    # f_bar ~ dnorm(0, 10),
-    f_sigma ~ dexp(1),
-    sigma ~ dexp(1)),
-  data = d2, chains = 2, cores = 2, iter = 2000, log_lik = TRUE)
+# m1.3_re = ulam(
+#   alist(
+#     stem_length ~ dnorm(mu, sigma),
+#     mu <- aG[genotype] + treatment*bT + bF[flat]*f_sigma,
+#     aG[genotype] ~ dnorm(150, 25),
+#     bT ~ dnorm(0, 10),
+#     bF[flat] ~ dnorm(0, 10),
+#     # f_bar ~ dnorm(0, 10),
+#     f_sigma ~ dexp(1),
+#     sigma ~ dexp(1)),
+#   data = d2, chains = 2, cores = 2, iter = 2000, log_lik = TRUE)
 
-precis(m1.3_re, depth = 2)
-plot(precis(m1.3_re, depth = 2))
-
-precis(m1.3, m1.3_re)
+# precis(m1.3_re, depth = 2)
+# plot(precis(m1.3_re, depth = 2))
+# 
+# precis(m1.3, m1.3_re)
 
 ```
 

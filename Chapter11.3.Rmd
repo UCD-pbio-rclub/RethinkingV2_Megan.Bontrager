@@ -15,6 +15,7 @@ library(rethinking)
 library(tidyverse)
 library(tidybayes)
 library(magrittr)
+library(mosaic)
 
 ```
 
@@ -426,8 +427,10 @@ fish = Fish %>%
 
 m3.7 = ulam(
   alist(
-    fish_caught ~ dgampois(lambda, phi),
+    fish_caught ~ dzipois(p, lambda),
+    logit(p) <- ap,
     log(lambda) <- a + log_hours + Ba*persons + Bl*livebait,
+    ap ~ dnorm(0, 1),
     a ~ dnorm(0, 1),
     Ba ~ dnorm(0, 1),
     Bl ~ dnorm(0, 1),
@@ -447,8 +450,13 @@ Calculating fish per hour for groups of different sizes, with/without live bait.
 
 ```{r}
 fish_per_group = as.data.frame(link(m3.7, data = data.frame(persons = c(1, 2, 3, 4, 1, 2, 3, 4), livebait = c(0, 0, 0, 0, 1, 1, 1, 1), log_hours = 0))) %>% 
+  pivot_longer(names_to = "category", values_to = "estimate", p.1:lambda.1) %>%
+  separate(category, into = c("variable", "group")) %>% 
+  mutate(group = derivedVariable(
+    group == 1, "a1_b0"
+  ))
+  
   rename(a1_b0 = V1, a2_b0 = V2, a3_b0 = V3, a4_b0 = V4, a1_b1 = V5, a2_b1 = V6, a3_b1 = V7, a4_b1 = V8) %>% 
-  pivot_longer(names_to = "category", values_to = "estimate", a1_b0:a4_b1) %>% 
   separate(category, into = c("adults", "bait"), remove = FALSE)
 
 fish_cis = fish_per_group %>% 

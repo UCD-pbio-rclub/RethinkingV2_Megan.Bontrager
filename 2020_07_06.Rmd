@@ -118,11 +118,13 @@ Now with phylogeny and brownian motion:
 # Make a distance matrix based on branch lengths
 Dmat = cophenetic(tre)
 
+tree_trimmed = keep.tip(tre, spp_obs)
+
 # Prep covariance matrix: Brownian motion
-# Rbm = corBrownian(phy = tre)
-# V = vcv(Rbm)
-# plot(Dmat, V)
-# image(V)
+Rbm = corBrownian(phy = tree_trimmed)
+V = vcv(Rbm)
+plot(Dmat, V)
+image(V)
 # Get message
 # No covariate specified, species will be taken as ordered in the data frame. To avoid this message, specify a covariate containing the species names with the 'form' argument.
 # Specifying form (done below) makes this message go away

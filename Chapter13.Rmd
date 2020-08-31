@@ -73,8 +73,10 @@ m = ulam(
   alist(
     y ~ dbinom(1, p),
     logit(p) <- a[group] + b*x,
-    a[group] ~ dnorm(0, 10),
-    b ~ ndnorm(0, 1))
+    a[group] ~ dnorm(a_bar, sigma),
+    a_bar ~ dnorm(0, 1.5),
+    sigma ~ dexp(1),
+    b ~ dnorm(0, 1))
   )
 ```
 
@@ -85,7 +87,9 @@ m = ulam(
   alist(
     y ~ dnorm(mu, sigma),
     mu <- a[group] + b*x,
-    a[group] ~ dnorm(0, 10),
+    a[group] ~ dnorm(a_bar, sigma2),
+    a_bar ~ dnorm(0, 1.5)
+    sigma2 ~ dexp(1),
     b ~ ndnorm(0, 1),
     sigma ~ dcauchy(0, 2)),
   )

@@ -113,7 +113,7 @@ d_list1 = list(contact = d$contact,
 
 t_mod1 = ulam(
   alist(
-    response ~ ordered_logistic(phi, kappa),
+    response ~ dordlogit(phi, kappa),
     phi <-  bA*action + bI*intention + bC*contact,
     kappa ~ dnorm(0, 1.5),
     c(bA, bI, bC) ~ dnorm(0,1),
@@ -125,7 +125,32 @@ t_mod1 = ulam(
 ```
 
 
-Model with varying effect of id only.
+Model with fixed varying interecpts of id only.
+
+```{r, cache = TRUE, eval = FALSE}
+
+d_list2a = list(contact = d$contact,
+              id = as.integer(d$id),
+              action = d$action,
+              intention = d$intention,
+              response = d$response
+              )
+
+t_mod2a = ulam(
+  alist(
+    response ~ dordlogit(phi, kappa),
+    phi <- aI[id] + bA*action + bI*intention + bC*contact,
+    kappa ~ dnorm(0, 1.5),
+    c(bA, bI, bC) ~ dnorm(0,1),
+    aI[id] ~ dnorm(0, 1.5)
+  ),
+  data = d_list2a, cores = 2, log_lik = TRUE
+)
+
+```
+
+
+Model with poooled effect of id only.
 
 ```{r, cache = TRUE, eval = FALSE}
 
@@ -138,7 +163,7 @@ d_list2 = list(contact = d$contact,
 
 t_mod2 = ulam(
   alist(
-    response ~ ordered_logistic(phi, kappa),
+    response ~ dordlogit(phi, kappa),
     phi <- aI[id] + bA*action + bI*intention + bC*contact,
     kappa ~ dnorm(0, 1.5),
     c(bA, bI, bC) ~ dnorm(0,1),

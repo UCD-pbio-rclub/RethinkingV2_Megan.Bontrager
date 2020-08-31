@@ -1,0 +1,202 @@
+---
+title: "2020_04_03"
+author: "Megan Bontrager"
+date: "4/3/2020"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load data and libraries:
+
+```{r, warning=FALSE, message=FALSE}
+library(rethinking)
+library(tidyverse)
+library(tidybayes)
+library(magrittr)
+library(dagitty)
+
+data(bangladesh) 
+
+colnames(bangladesh) = str_replace(colnames(bangladesh), "\\.", "_")
+
+```
+
+Look at data:
+```{r}
+summary(bangladesh) 
+hist(bangladesh$age_centered)
+```
+
+Make data into list:
+
+```{r}
+dat = list(use_contraception = bangladesh$use_contraception, 
+           district = as.numeric(as.factor(bangladesh$district)),
+           urban = bangladesh$urban,
+           age_centered = bangladesh$age_centered,
+           living_children = bangladesh$living_children)
+plot(bangladesh$district, dat$district)
+```
+
+#### Problem 1
+
+Basic model from problem 1:
+
+```{r, cache = TRUE}
+m1 = ulam(
+  alist(
+    use_contraception ~ dbinom(1, p),
+    logit(p) <- a[district] + Bu[district]*urban,
+    a[district] ~ dnorm(0, 1.5),
+    Bu[district] ~ dnorm(0, 1.5)),
+  data = dat, chains = 4, log_lik = TRUE, iter = 4e3, cores = 2
+  )
+```
+
+```{r}
+precis(m1, depth = 2)
+```
+
+(Plot correlation between intercepts and slopes, plot )
+
+#### Problem 2
+
+Does age affect contraception use directly? or only because of a correlation between age and children?
+
+First, is there a correlation between age and children?
+
+```{r}
+ggplot(bangladesh, aes(x = age_centered, y = living_children, color = use_contraception, fill = use_contraception, group = use_contraception)) +
+  geom_jitter(aes(color = use_contraception, fill = use_contraception), alpha = 0.2) +
+  geom_smooth(method = "lm")
+```
+
+
+Draw dags.
+
+```{r}
+dag1 = dagitty("dag { urban -> use
+               age -> use
+               district -> use
+               children -> use }")
+drawdag(dag1)
+
+dag2 = dagitty("dag { urban -> use
+               age -> children
+               district -> use
+               children -> use }")
+drawdag(dag2)
+
+dag3 = dagitty("dag { urban -> use
+               age -> use
+               age -> children
+               district -> use
+               children -> use }")
+drawdag(dag3)
+
+```
+
+
+Age and kids both have separate effects:
+
+```{r, cache = TRUE}
+
+m2 = ulam(
+  alist(
+    use_contraception ~ dbinom(1, p),
+    logit(p) <- a[district] + Bu[district]*urban + Bage*age_centered + Bkids*living_children,
+    a[district] ~ dnorm(0, 1.5),
+    Bu[district] ~ dnorm(0, 1.5),
+    Bage ~ dnorm(0, 1.5),
+    Bkids ~ dnorm(0, 1.5),
+    Bu[district] ~ dnorm(0, 1.5)),
+  data = dat, chains = 4, log_lik = TRUE, iter = 4e3, cores = 2
+  )
+
+```
+
+```{r}
+precis(m2)
+```
+
+
+Only age:
+
+```{r, cache = TRUE}
+
+m3 = ulam(
+  alist(
+    use_contraception ~ dbinom(1, p),
+    logit(p) <- a[district] + Bu[district]*urban + Bage*age_centered,
+    a[district] ~ dnorm(0, 1.5),
+    Bu[district] ~ dnorm(0, 1.5),
+    Bage ~ dnorm(0, 1.5),
+    Bu[district] ~ dnorm(0, 1.5)),
+  data = dat, chains = 4, log_lik = TRUE, iter = 4e3, cores = 2
+  )
+
+```
+
+```{r}
+precis(m3)
+```
+
+Only kids:
+
+```{r, cache = TRUE}
+
+m4 = ulam(
+  alist(
+    use_contraception ~ dbinom(1, p),
+    logit(p) <- a[district] + Bu[district]*urban + Bkids*living_children,
+    a[district] ~ dnorm(0, 1.5),
+    Bu[district] ~ dnorm(0, 1.5),
+    Bkids ~ dnorm(0, 1.5),
+    Bu[district] ~ dnorm(0, 1.5)),
+  data = dat, chains = 4, log_lik = TRUE, iter = 4e3, cores = 2
+  )
+
+```
+
+```{r}
+precis(m4)
+```
+
+#### Problem 3
+
+Now, try including children as an ordered category, rather than a continuous predictor. 
+
+Level order should be ok. 
+
+
+
+```{r, cache = TRUE, eval = FALSE}
+
+# Need to make alpha? 
+
+dat$alpha = rep(1, 3)
+
+m5 = ulam(
+  alist(
+    use_contraception ~ binomial(1, p),
+    logit(p) <- a +
+      # a[district] + Bu[district]*urban 
+       Bkids*sum(delta_k[1:living_children]),
+    a ~ dnorm(0, 1.5),
+    # a[district] ~ dnorm(0, 1.5),
+    # Bu[district] ~ dnorm(0, 1.5),
+    Bkids ~ dnorm(0, 1.5),
+    vector[4]: delta_k <<- append_row(0, delta),
+    simplex[3]: delta ~ dirichlet(alpha)),
+  data = dat, chains = 4, log_lik = TRUE, iter = 4e3, cores = 2
+  )
+
+
+precis(m5, depth = 2, omit = "cutpoints")
+```
+

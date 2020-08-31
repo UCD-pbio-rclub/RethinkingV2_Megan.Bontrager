@@ -38,6 +38,12 @@ Suppose that a coefficient in a logistic regression has value 1.7. What does thi
 
 This indicates that for a unit increase in that coefficient, there is a 1.7x proportional change in the response variable. 
 
+```{r}
+inv_logit(1.7)
+
+exp(1.7)
+```
+
 ### 10M1
 
 As explained in the chapter, binomial data can be organized in aggregated and disaggregated forms, without any impact on inference. But the likelihood of the data does change when the data are converted between the two formats. Can you explain why?
