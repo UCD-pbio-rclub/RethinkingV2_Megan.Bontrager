@@ -202,10 +202,10 @@ ggplot(dat_plot_temp_block, aes(x = temperature_diff, y = predicted_germ, fill =
 ```
 
 ```{r}
-traceplot(m0.5)
-traceplot(m1)
-traceplot(m2)
-traceplot(m3)
+# traceplot(m0.5)
+# traceplot(m1)
+# traceplot(m2)
+# traceplot(m3)
 ```
 
 #### There are other complexities to this data. For example, there is also some family structure within populations (dam and sire) which could be included as hierarchical effects. There are also other response variables (November size, March survival and size, first flower date, last flower date, fruit number, estimated seed production) that might require different likelihoods (and in some cases treatment for over-dispersion or zero inflation). So if the above problems were too easy and you feel adventurous, you could try analyzing one of these responses instead of germination (you will need to filter out missing observations). 
