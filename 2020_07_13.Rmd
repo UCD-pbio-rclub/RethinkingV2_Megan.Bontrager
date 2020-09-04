@@ -177,12 +177,13 @@ Now fit model with SE of age.
 ```{r, cache = TRUE, message=FALSE}
 d3$N = nrow(elephants)
 
+sdA = 5/sd(elephants$AGE)
+
 m4 = ulam(
   alist(
     matings ~ dpois(lambda),
     log(lambda) <- a + B*age_est,
-    age_est ~ dnorm(age, 5),
-    # But 5 is SE, need to change to sd
+    age_est ~ dnorm(age, 0.76),
     vector[N]:age ~ dnorm(0, 1),
     a ~ dnorm(0, 10), 
     B ~ dnorm(0, 1)), data = d3, chains = 4, cores = 4

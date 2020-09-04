@@ -90,3 +90,40 @@ precis(m2)
 plot(precis(m2))
 ```
 
+14H2. Varying effects models are useful for modeling time series, as well as spatial clustering. In a time series, the observations cluster by entities that have continuity through time, such as individuals. Since observations within individuals are likely highly correlated, the multilevel structure can help quite a lot. You’ll use the data in data(Oxboys), which is 234 height measurements on 26 boys from an Oxford Boys Club (I think these were like youth athletic leagues?), at 9 different ages (centered and standardized) per boy. You’ll be interested in predicting height, using age, clustered by Subject (individual boy).
+
+Fit a model with varying intercepts and slopes (on age), clustered by Subject. Present and interpret the parameter estimates. Which varying effect contributes more variation to the heights, the intercept or the slope?
+
+Load and prep the data:
+
+```{r}
+data(Oxboys)
+
+head(Oxboys)
+mean(Oxboys$height)
+
+O = list(S = Oxboys$Subject,
+         A = Oxboys$age,
+         H = Oxboys$height,
+         O = Oxboys$Occasion)
+```
+
+```{r}
+m3 = ulam(
+    alist(
+        H ~ normal(mu, sigma),
+        mu <- aS[S] + bS[S]*A,
+        c(aS, bS)[S] ~ multi_normal(c(a,b), Rho, sigmaS),
+        a ~ normal(150, 20),
+        b ~ normal(0, 1),
+        sigmaS ~ exponential(1),
+        sigma ~ exponential(1),
+        Rho ~ lkj_corr(2)
+    ) , data = O , chains=4 , cores=4)
+
+```
+
+
+14H3. Now consider the correlation between the varying intercepts and slopes. Can you explain its value? How would this estimated correlation influence your predictions about a new sample of boys?
+
+

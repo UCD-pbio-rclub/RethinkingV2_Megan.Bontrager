@@ -1,0 +1,94 @@
+---
+title: "2020_03_17"
+author: "Megan Bontrager"
+date: "3/27/2020"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Arabidopsis question with Julin's data
+
+Attached are data from an experiment measuring hypocotyl length in ~ 180 natural arabidopsis accessions grown in high and low red:far-red light.  We want to know if there are differences in accessions in their length in high R:FR ("H") and in their response to low R:FR("L").  Also we want to obtain an estimate for hypocotyl length for each accession in high and low R:FR for downstream GWAS analysis.
+
+First, load libraries and data:
+
+```{r}
+library(tidyverse)
+library(rethinking)
+
+hyp = read_csv("hyp.lengths.both.experiments.labels.csv") 
+
+# head(hyp)
+
+```
+
+Relevant variables:
+
+  length -- hypocotyl length
+  line -- unique ID for each accession (you could also use nativename)
+  light -- indicator for high or low RFR
+  exp -- two independent experiments were done
+  plate -- this is an incomplete block design with a subset (10? 12?) of accessions on each plate.
+
+Explore these variables and make into a list:
+
+```{r}
+
+# hist(hyp$length)
+# table(hyp$line)
+# table(hyp$light)
+# table(hyp$exp)
+# table(hyp$exp, hyp$plate)
+# table(hyp$exp, hyp$line)
+# Plates are in one exp or the other
+# Lines are typically in both experiments
+
+
+# line is numeric, I wonder if I can just leave it as it is as an index or if it needs to be continuous?
+# Nope, needs to be continuous
+# hist(hyp$line)
+
+hyp_list = list(length = hyp$length, line = as.integer(as.factor(hyp$line)), light = ifelse(hyp$light == "H", 2, 1), exper = as.integer(as.factor(hyp$exp)), plate = as.integer(as.factor(hyp$plate)))
+sum(is.na(hyp_list$exper))
+table(hyp_list$exper)
+table(hyp_list$light)
+table(hyp_list$plate)
+
+```
+
+
+Let's try a variety of increasingly complex models:
+
+1. No pooling
+
+We want to know if there are differences in accessions in their length in high R:FR ("H") and in their response to low R:FR("L").  Also we want to obtain an estimate for hypocotyl length for each accession in high and low R:FR for downstream GWAS analysis.
+
+```{r}
+
+m1 = ulam(
+  alist(
+    length ~ dnorm(mu, sigma),
+    mu <- a[line] + Blight[light],
+    a[line] ~ dnorm(0, 1.5),
+    Blight[light] ~ dnorm(0, 1.5),
+    sigma ~ dexp(1)),
+  data = hyp_list, chains = 4, log_lik = TRUE, iter = 4e3
+  )
+
+
+```
+
+2. Partial pooling of intercepts and slopes for line and intercepts for plate and experiment, but treat each variable separately (no multivariate component).  you might also consider adding an experiment slope effect
+3. As 2, but use a multivariate normal model for the line slope and intercept effects
+4. As 3, but non-centered
+
+Evaluate and compare the models.  Is there evidence of line, treatment, and line X treatment effects?  How does the magnitude of the experiment and plate effects compare to the line effects?
+
+
+```{r }
+```

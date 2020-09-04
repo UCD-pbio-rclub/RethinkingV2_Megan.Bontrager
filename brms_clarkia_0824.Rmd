@@ -1,0 +1,137 @@
+---
+title: "brms_clarkia_20200824"
+author: "Megan Bontrager"
+date: "8/24/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Libraries:
+
+```{r, message = FALSE, warning = FALSE}
+
+library(tidyverse)
+library(brms)
+library(tidybayes)
+library(rethinking)
+```
+
+
+I’ve attached some data from a common garden experiment, where plants from 15 different populations were planted out (locations are shown in Figure 1 here if you’re curious). One goal for the experiment was to see if temperature of origin affected performance of plants in the common garden. Here are some practice questions, very similar to Julin’s from last week. The data set is big-ish. I’ve already sub-sampled it, but there are still 3250 observations. The models are still running quickly on my computer, but if that’s not the case for you, feel free to sub-sample it further. Please let me know if you have any questions.
+
+Load the data:
+
+```{r}
+
+c = read_csv("clarkia_transplant_data.csv")
+```
+
+
+1. Fit a simple model with effects of temperature difference (temperature_diff_fall) on November germination (nov_germ). Temperature difference is already centered and scaled (i.e., negative values are the smallest temperature differences). Make sure to use the appropriate likelihood for the germination data (0 = no germ, 1 = germ).
+
+```{r, cache = TRUE, message = FALSE, error=FALSE, warning=FALSE}
+
+m1 = brm(nov_germ ~ temperature_diff_fall, 
+         family = bernoulli(), 
+         data = c, 
+         prior = c(set_prior("normal(0, 2)", class = "b")), sample_prior = TRUE)
+
+prior_summary(m1)
+summary(m1)
+
+```
+
+
+2. Simulate from your priors to see if you’ve chosen reasonable priors, adjust them if necessary.
+
+
+```{r, cache = TRUE, message = FALSE, error=FALSE, warning=FALSE}
+ps = prior_samples(m1)
+hist(ps$Intercept)
+hist(ps$b)
+
+dat_prior_temp = ps %>%
+  mutate(sample = row_number()) %>% 
+  
+  crossing(temperature_diff = seq(-1.5, 2, by = 0.1)) %>%
+  mutate(predicted_germ = inv_logit(Intercept + b*temperature_diff)) %>%
+  group_by(temperature_diff) # %>%
+  point_interval(predicted_germ, 
+                 .width = 0.95, .point = median, .interval = hdi)
+
+ggplot(dat_prior_temp, aes(x = temperature_diff, y = predicted_germ, group = sample)) + 
+  geom_line(alpha = 0.1) #+
+  geom_ribbon(aes(ymin = .lower, ymax = .upper), alpha = 0.5)
+
+
+```
+
+
+These blocks were set up in the field, and had differences in soil depth, slope, and competitive environment. So maybe a model that includes block will describe the data better.
+
+3. Fit a model that includes an effect of block (blk), with no pooling.
+
+```{r, cache = TRUE, message = FALSE, error=FALSE, warning=FALSE}
+
+c$blk_fact = as.factor(c$blk)
+
+m2 = brm(nov_germ ~ temperature_diff_fall + blk_fact, family = binomial(), data = c, prior = c(set_prior("normal(0, 2)", class = "b")), sample_prior = TRUE)
+
+summary(m2)
+fixef(m2)
+
+```
+
+4. Fit a model that includes block, and allows partial pooling.
+
+Default iterations doesn't converge
+
+```{r, cache = TRUE, message = FALSE, error=FALSE, warning=FALSE}
+
+m3 = brm(nov_germ ~ temperature_diff_fall + (1|blk_fact), family = binomial(), data = c, prior = c(set_prior("normal(0, 2)", class = "b")), sample_prior = TRUE, iter = 6000)
+
+prior_summary(m3)
+
+summary(m3)
+coef(m3)
+ranef(m3)
+
+
+```
+
+The experiment included many individuals from each of the 15 populations. So, each individual is not an independent representative of a given temperature, but might be similar to other plants from that population for reasons besides temperature.
+
+5. Build a model that accounts for this by including population (pop) and allowing partial pooling between populations A) without block, and B) with block included as in the model above. How does including population affect the temperature estimate?
+
+```{r, cache = TRUE, message = FALSE, error=FALSE, warning=FALSE}
+
+m4 = brm(nov_germ ~ temperature_diff_fall+ (1|pop), family = binomial(), data = c, prior = c(set_prior("normal(0, 2)", class = "b")), sample_prior = TRUE, iter = 6000)
+
+summary(m4)
+coef(m4)
+ranef(m4)
+
+m5 = brm(nov_germ ~ temperature_diff_fall + (1|blk_fact) + (1|pop), family = binomial(), data = c, prior = c(set_prior("normal(0, 2)", class = "b")), sample_prior = TRUE, iter = 6000)
+
+summary(m5)
+coef(m5)
+ranef(m5)
+
+
+```
+
+6. Compare the five models you built using WAIC. Which fits best?
+
+
+```{r}
+waic(m1, m2, m3, m4, m5)
+```
+
+7. Plot effects of temperature difference for the average block, and also make a plot that includes the variability across blocks.
+
+
+
+There are other complexities to this data. For example, there is also some family structure within populations (dam and sire) which could be included as hierarchical effects. There are also other response variables (November size, March survival and size, first flower date, last flower date, fruit number, estimated seed production) that might require different likelihoods (and in some cases treatment for over-dispersion or zero inflation). So if the above problems were too easy and you feel adventurous, you could try analyzing one of these responses instead of germination (you will need to filter out missing observations).

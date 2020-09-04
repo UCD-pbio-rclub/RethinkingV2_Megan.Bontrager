@@ -23,9 +23,6 @@ c) although flats are listed as 1-6, flats in sun and shade are separate. Create
 
 
 ```r
-library(tidyverse)
-library(rethinking)
-
 dat = read_csv("figure4phyE.csv") %>% 
   filter(day == 35) %>% 
   mutate(stem_length = epi + int1 + int2 + int3,
@@ -387,17 +384,13 @@ a) for average cluster
 
 
 ```r
-post = extract.samples(m1.3)
-
-avg_flat = rnorm(2000, 0, post$f_sigma)
-
 # Assume block effect is 0
-d_link1 = link(m1.3, replace = list(flat = 0))
-
-avg_flat = rnorm(2000, 0, post$f_sigma)
-
-# Assume block effect is 0
-d_link1 = link(m1.3, replace = list(flat = avg_flat))
+# d_link1 = link(m1.3, replace = list(flat = 0))
+# 
+# avg_flat = rnorm(2000, 0, post$f_sigma)
+# 
+# # Assume block effect is 0
+# d_link1 = link(m1.3, replace = list(flat = avg_flat))
 ```
 
 
@@ -407,8 +400,75 @@ d) showing new clusters.
 
 ## Q5) Reparameterize the model to help with divergent transitions (even if there aren't any)
 
+
+```r
+# m1.3_re = ulam(
+#   alist(
+#     stem_length ~ dnorm(mu, sigma),
+#     mu <- aG[genotype] + treatment*bT + bF[flat]*f_sigma,
+#     aG[genotype] ~ dnorm(150, 25),
+#     bT ~ dnorm(0, 10),
+#     bF[flat] ~ dnorm(0, 10),
+#     # f_bar ~ dnorm(0, 10),
+#     f_sigma ~ dexp(1),
+#     sigma ~ dexp(1)),
+#   data = d2, chains = 2, cores = 2, iter = 2000, log_lik = TRUE)
+
+# precis(m1.3_re, depth = 2)
+# plot(precis(m1.3_re, depth = 2))
+# 
+# precis(m1.3, m1.3_re)
+```
+
 ## Q6--optional)
 a) Which genotypes differ from MoneyMaker in Sun conditions?
 b) Which genotypes differ from MoneyMaker in Shade conditions?
 c) Which genotypes differ from MoneyMaker in their response to shade (difference in sun vs shade)?
+
+
+```r
+post = extract.samples(m1.3)
+
+shade_preds = post$aG %>% 
+  as.data.frame() %>% 
+  pivot_longer(V1:V6) %>% 
+  group_by(name) %>%
+  point_interval(value, 
+                 .width = 0.95, .point = median, .interval = hdi)
+```
+
+```
+## Warning: unnest() has a new interface. See ?unnest for details.
+## Try `df %>% unnest(c(.lower, .upper))`, with `mutate()` if needed
+```
+
+```r
+ggplot(shade_preds) +
+  geom_pointinterval(aes(x = name, y = value, ymin = .lower, ymax= .upper))
+```
+
+![](tomato_growth_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
+
+```r
+sun_preds = post$aG %>% 
+  as.data.frame() %>% 
+  bind_cols(., bT = post$bT) %>% 
+  pivot_longer(V1:V6) %>% 
+  group_by(name) %>%
+  mutate(value = value + bT) %>% 
+  point_interval(value, 
+                 .width = 0.95, .point = median, .interval = hdi)
+```
+
+```
+## Warning: unnest() has a new interface. See ?unnest for details.
+## Try `df %>% unnest(c(.lower, .upper))`, with `mutate()` if needed
+```
+
+```r
+ggplot(sun_preds) +
+  geom_pointinterval(aes(x = name, y = value, ymin = .lower, ymax= .upper))
+```
+
+![](tomato_growth_files/figure-html/unnamed-chunk-11-2.png)<!-- -->
 

@@ -89,8 +89,7 @@ ggplot(dat, aes(x = blk, y = nov_germ)) +
 m0.5 = ulam(
   alist(
     nov_germ ~ dbinom(1, p),
-    logit(p) <- a + bT*temperature_diff + bB[blk],
-    a ~ dnorm(0, 1.5),
+    logit(p) <- bT*temperature_diff + bB[blk],
     bT ~ dnorm(0, 0.5),
     bB[blk] ~ dnorm(0, 0.5)
   ), data = dat_nov_germ, cores = 2, chains = 2, iter = 2000, log_lik = TRUE)
