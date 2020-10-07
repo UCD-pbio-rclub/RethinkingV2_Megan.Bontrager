@@ -1,22 +1,25 @@
 library(tidyverse)
 library(rethinking)
 
-dat = read_csv("Bontrager_transplant_data.csv") %>% 
+dat = read_csv("transplant_data.csv") %>% 
   filter(site == "AQ") %>% 
   filter(!is.na(nov_germ)) %>% 
   separate(blk, 2, into = c("drop", "blk")) %>% 
   mutate(blk = as.numeric(blk)) %>%
   filter(type == "WI") %>% 
-  filter(blk %in% c(1, 2, 3, 4, 5))
+  filter(blk %in% c(1, 2, 3, 4)) %>% 
+  select(temperature_diff_fall = abs_tave_diff_sep_nov_scaled, blk, nov_germ, pop = dampop, dam, sire, nov_size, mar_surv, mar_size, fruit_count, total_est_seeds, temperature_diff_annual = abs_tave_diff_sep_jul_scaled, precip_diff_spring = abs_ppt_mm_diff_midparent_apr_jul, first_fl_julian, last_fl_julian)
 
-summary(dat_nov_germ$temperature_diff)
+write.csv(dat, "clarkia_transplant_data.csv", row.names = FALSE)
 
 dat_nov_germ = list(
   nov_germ = dat$nov_germ,
   blk = dat$blk,
-  temperature_diff = dat$abs_tave_diff_sep_nov_scaled,
-  pop = as.integer(as.factor(dat$dampop))
+  temperature_diff = dat$temperature_diff_fall,
+  pop = as.integer(as.factor(dat$pop))
 )
+
+summary(dat_nov_germ$temperature_diff)
 
 # Model with temperature only
 m0 = ulam(
@@ -32,10 +35,14 @@ mu = link(m0, post = prior, data = list(temperature_diff = seq(-1.5, 2, by = 0.5
 
 mu_plot = data.frame(mu) %>% 
   mutate(row = row_number()) %>% 
-  pivot_longer(cols = X1:X8, names_to = "key", values_to = "value", ) 
+  pivot_longer(cols = X1:X8, names_to = "key", values_to = "value") %>% 
+  mutate(temp_diff = (as.numeric(str_remove(key, "X")) - 4)/2)
+  
 
-ggplot(mu_plot, aes(x = key, y = value, group = row)) + 
+ggplot(mu_plot, aes(x = temp_diff, y = value, group = row)) + 
   geom_line(alpha = 0.2)
+
+precis(m0, depth = 2)
 
 # Model with block and no pooling
 m0.5 = ulam(
@@ -93,15 +100,4 @@ m3 = ulam(
 precis(m3, depth = 2)
 
 compare(m0, m0.5, m1, m2, m3)
-
-
-ggplot(dat, aes(x = sirepop, y = abs_tave_diff_midparent_sep_nov)) +
-  geom_point() +
-  stat_summary(fun.y = "mean", geom = "point")
-
-
-
-dat_nov = dat %>% 
-  filter(!is.na(f))
-
 

@@ -211,5 +211,15 @@ m4.2.3 <- stan_gamm4(height ~ w, data = juv,
 summary(m4.2.3)
 ```
 
-<!-- ## Tomato problem -->
+## Tomato problem
+From chapter 8 I assigned a tomato problem from my data “Use the tomato.csv data set and evaluate whether hypocotyl length (”hyp“) is affected by shade (”trt“), species (”species“) and their interaction.”
+
+```{r, error=FALSE, message=FALSE, warning = FALSE, cache=TRUE, eval = FALSE}
+
+t = read_csv("tom")
+
+```
+
+
+
 
