@@ -17,7 +17,7 @@ stdi = germ %>%
 
 totals = stdi %>% 
   group_by(pops, temps, wps, total_seeds, tray, well) %>% 
-  summarize(total_germ = max(cumulative_germ)) %>% 
+  dplyr::summarize(total_germ = max(cumulative_germ)) %>% 
   mutate(prop_germ = total_germ/total_seeds) %>% 
   # Center temperature 22.5 = middle temp (5+40)/2 
   mutate(temps = temps - 22.5)
