@@ -20,9 +20,9 @@ parameters {
     
     // F(x) = D/(1+(x/C)^(-B)) 
     
-    real<lower = 0, upper = 1> c[n_temps];           // asymptote (c)
-    real b;                    // inflection point (b)
-    real <lower = 0> a;                    // steepness (a)
+    real<lower = 0, upper = 1> b1_t[n_temps];           // asymptote (c)
+    real b2_t;                    // inflection point (b)
+    real <lower = 0> b3_t;                    // steepness (a)
     
     
     
@@ -36,24 +36,20 @@ model {
   // priors
   
     // Fixed effects: diffuse normal priors
-    a ~ lognormal(0, 2);
-    b ~ normal(0, 2);
-    c[n_temps] ~ beta(5, 20);
+    b2_t ~ lognormal(0, 2);
+    b3_t ~ normal(0, 2);
+    b1_t[n_temps] ~ beta(5, 20);
   
   // }  
   // likelihood calculation
 
     // for each iteration, loop through 1:nB observations and calculate likelihood
     for (i in 1:n) {
-      // real ct;
-      real p;
+      real theta;
       // F(x) = D/(1+(x/C)^(-B)) 
-      // theta = b1_t[temps[i]]*(1+(day[i]/b2_t)^(-b3_t));
-      p = c / (1 + exp(-a * (day[i] - b)));
-      // ct = c[temps[i]];
-      // p = inv_logit(a*(day[i]-b));
+      theta = b1_t[temps[i]]/(1+(day[i]/b2_t)^(-b3_t));
             
-      germ[i] ~ bernoulli(p);
+      germ[i] ~ bernoulli(theta);
     
     }
     
@@ -72,4 +68,5 @@ model {
 //     }
 //   
 // }
+
 
