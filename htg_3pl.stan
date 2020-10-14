@@ -21,8 +21,8 @@ parameters {
     // F(x) = D/(1+(x/C)^(-B)) 
     
     real b1_t[n_temps];           // asymptote (D)
-    real b2_t;           // inflection point (C)
-    real b3_t;           // steepness (B)
+    real b2_t;                    // inflection point (C)
+    real b3_t;                    // steepness (B)
     real<lower = 0> sigma_resid;  // standard deviation of residuals
     
     
@@ -35,7 +35,7 @@ model {
   // sampling occurs in 'model' block
   
   // additional convenience variables
-    real mu;           // predicted response in Model B
+    real theta;           // predicted response in Model B
 
   // priors
 
@@ -55,23 +55,23 @@ model {
       
     // F(x) = D/(1+(x/C)^(-B)) 
     
-      mu = b1_t[temps[i]]*(1+(day[i]/b2_t)^(-b3_t));
+      theta = b1_t[temps[i]]*(1+(day[i]/b2_t)^(-b3_t));
             
-      target += normal_lpdf(cumulative_prop_germ[i] | mu, sigma_resid);
+      day[i] ~ bernoulli(theta);
     
     }
     
 }
 generated quantities {
   
-  real mu;           
+  real theta;           
   real log_lik[n];
   
     for (i in 1:n) {
     
-      mu = b1_t[temps[i]]*(1+(day[i]/b2_t)^(-b3_t));
+      theta = b1_t[temps[i]]*(1+(day[i]/b2_t)^(-b3_t));
             
-      log_lik[i] = normal_lpdf(cumulative_prop_germ[i] | mu, sigma_resid);
+      log_lik[i] = bernoulli(theta);
     
     }
   
